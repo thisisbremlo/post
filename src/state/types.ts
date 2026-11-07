@@ -33,6 +33,8 @@ export interface Tab {
   /** Address currently shown. Internal pages use the scaffold:// scheme. */
   url: string;
   title: string;
+  /** The page's own icon, as the engine reported it. Null until one arrives. */
+  favicon?: string | null;
   loading: boolean;
   /** Back/forward stack of addresses for this tab. */
   entries: string[];

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { DragEvent as ReactDragEvent, ReactNode } from "react";
 
+import { isNative } from "../lib/bridge";
 import { internalPageOf, newTabUrl } from "../lib/url";
 import { useStore } from "../state/store";
 import type { Tab, TabGroup } from "../state/types";
@@ -21,6 +22,47 @@ const PAGE_ICONS: Record<string, IconName> = {
 function iconFor(url: string): IconName {
   const page = internalPageOf(url);
   return (page && PAGE_ICONS[page]) || "globe";
+}
+
+/**
+ * The engine hands up the page's own icon; the web harness has no engine, so it
+ * asks the site for the one it publishes at its root. Either way, a site with
+ * no icon of its own keeps the drawn globe.
+ */
+function iconSource(tab: Tab): string | null {
+  if (internalPageOf(tab.url)) return null;
+  if (tab.favicon) return tab.favicon;
+  if (isNative) return null;
+  try {
+    return `${new URL(tab.url).origin}/favicon.ico`;
+  } catch {
+    return null;
+  }
+}
+
+function TabMark({ tab }: { tab: Tab }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const source = iconSource(tab);
+
+  if (source && broken !== source) {
+    return (
+      <span className="tab-mark" aria-hidden="true">
+        <img
+          className="tab-favicon"
+          src={source}
+          alt=""
+          draggable={false}
+          onError={() => setBroken(source)}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span className="tab-mark" aria-hidden="true">
+      <Icon name={iconFor(tab.url)} size={12} />
+    </span>
+  );
 }
 
 /**
@@ -149,9 +191,7 @@ export function TabStrip() {
         onDragLeave={() => setOver((id) => (id === tab.id ? null : id))}
         onDrop={(event) => dropOn(event, tab.id)}
       >
-        <span className="tab-mark" aria-hidden="true">
-          <Icon name={iconFor(tab.url)} size={12} />
-        </span>
+        <TabMark tab={tab} />
         <span className="tab-title">{tab.title}</span>
         <button
           type="button"

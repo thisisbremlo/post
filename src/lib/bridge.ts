@@ -27,6 +27,7 @@ export type BrowserCommand =
 export interface NativeViewEvent {
   kind:
     | "title"
+    | "favicon"
     | "loading"
     | "open"
     | "url"

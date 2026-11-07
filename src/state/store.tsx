@@ -87,6 +87,7 @@ export type Action =
   | { type: "activate-tab"; id: string }
   | { type: "navigate"; tabId?: string; url: string }
   | { type: "tab-title"; tabId: string; title: string }
+  | { type: "tab-favicon"; tabId: string; url: string | null }
   | { type: "tab-loading"; tabId: string; loading: boolean }
   | { type: "tab-url"; tabId: string; url: string }
   | { type: "back"; tabId: string }
@@ -121,6 +122,15 @@ function recordHistory(history: HistoryEntry[], url: string, title: string): His
 
 function withTab(state: ScaffoldState, id: string, update: (tab: Tab) => Tab): ScaffoldState {
   return { ...state, tabs: state.tabs.map((tab) => (tab.id === id ? update(tab) : tab)) };
+}
+
+/** An icon belongs to the site, so a move within it keeps the icon it already has. */
+function sameOrigin(from: string, to: string): boolean {
+  try {
+    return new URL(from).origin === new URL(to).origin;
+  } catch {
+    return false;
+  }
 }
 
 export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
@@ -186,6 +196,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         ...item,
         url: action.url,
         title: titleFor(action.url),
+        favicon: sameOrigin(item.url, action.url) ? item.favicon : null,
         loading: !internalPageOf(action.url),
         entries,
         pointer: entries.length - 1,
@@ -198,6 +209,9 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
 
     case "tab-title":
       return withTab(state, action.tabId, (tab) => ({ ...tab, title: action.title }));
+
+    case "tab-favicon":
+      return withTab(state, action.tabId, (tab) => ({ ...tab, favicon: action.url }));
 
     case "tab-loading":
       return withTab(state, action.tabId, (tab) => ({ ...tab, loading: action.loading }));
@@ -212,6 +226,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
           ...item,
           url: action.url,
           title: item.title,
+          favicon: sameOrigin(item.url, action.url) ? item.favicon : null,
           entries,
           pointer: entries.length - 1,
         })),
@@ -229,6 +244,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         pointer,
         url,
         title: titleFor(url),
+        favicon: sameOrigin(item.url, url) ? item.favicon : null,
         loading: !internalPageOf(url),
       }));
     }
@@ -243,6 +259,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         pointer,
         url,
         title: titleFor(url),
+        favicon: sameOrigin(item.url, url) ? item.favicon : null,
         loading: !internalPageOf(url),
       }));
     }

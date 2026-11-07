@@ -50,6 +50,11 @@ function bindView(view, tabId) {
   contents.on("did-start-loading", () => notify({ kind: "loading", tabId, loading: true }));
   contents.on("did-stop-loading", () => notify({ kind: "loading", tabId, loading: false }));
   contents.on("page-title-updated", (_event, title) => notify({ kind: "title", tabId, title }));
+  // The page's own icon, so a tab is recognised before its title is read.
+  contents.on("page-favicon-updated", (_event, favicons) => {
+    const icon = favicons.find((item) => /^(https?:|data:image\/)/i.test(item)) ?? null;
+    notify({ kind: "favicon", tabId, url: icon });
+  });
 
   contents.on("did-navigate", (_event, url) => {
     const entry = pageViews.get(tabId);

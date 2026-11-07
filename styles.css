@@ -1,0 +1,9 @@
+
+/* A tab's own icon, drawn at the same weight as the Lucide marks beside it. */
+.tab-favicon {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  object-fit: contain;
+}

@@ -529,6 +529,9 @@ export function App() {
       if (event.kind === "title" && event.tabId && event.title) {
         dispatch({ type: "tab-title", tabId: event.tabId, title: event.title });
       }
+      if (event.kind === "favicon" && event.tabId) {
+        dispatch({ type: "tab-favicon", tabId: event.tabId, url: event.url ?? null });
+      }
       if (event.kind === "loading" && event.tabId) {
         dispatch({ type: "tab-loading", tabId: event.tabId, loading: Boolean(event.loading) });
       }
