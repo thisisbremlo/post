@@ -12,8 +12,28 @@ export interface LayoutSync {
   reference: { url: string; rect: ViewRect } | null;
 }
 
+export type BrowserCommand =
+  | "new-tab"
+  | "close-tab"
+  | "keep"
+  | "shelf"
+  | "address"
+  | "palette"
+  | "back"
+  | "forward"
+  | "reload"
+  | "reference";
+
 export interface NativeViewEvent {
-  kind: "title" | "loading" | "open" | "url" | "context-keep" | "keep-request" | "hold";
+  kind:
+    | "title"
+    | "loading"
+    | "open"
+    | "url"
+    | "context-keep"
+    | "keep-request"
+    | "hold"
+    | "download";
   tabId?: string;
   url?: string;
   title?: string;
@@ -54,6 +74,8 @@ export interface ScaffoldBridge {
   onViewEvent: (handler: (event: NativeViewEvent) => void) => () => void;
   /** The shell fetches main through the checkout's own remote; null means quiet. */
   onUpdate: (handler: (notice: UpdateNotice | null) => void) => () => void;
+  /** Menu items are the shell's; the chrome owns what they do. */
+  onCommand: (handler: (command: BrowserCommand) => void) => () => void;
   vault: {
     list: () => Promise<VaultEntry[]>;
     save: (entry: { origin: string; username: string; password: string }) => Promise<void>;

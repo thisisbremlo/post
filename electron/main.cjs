@@ -227,6 +227,66 @@ function bindView(view, tabId) {
   );
 }
 
+/* ------------------------------------------------------------------- menu */
+
+function sendCommand(command) {
+  chromeView?.webContents.send("scaffold:command", command);
+}
+
+/** A browser's menu, not an app's: every item is a thing the chrome already does. */
+function applyMenu() {
+  const isMac = process.platform === "darwin";
+  const template = [
+    ...(isMac ? [{ role: "appMenu" }] : []),
+    ...(isMac ? [] : [{ role: "fileMenu" }]),
+    {
+      label: "File",
+      submenu: [
+        { label: "New Tab", accelerator: "CmdOrCtrl+T", click: () => sendCommand("new-tab") },
+        { label: "Close Tab", accelerator: "CmdOrCtrl+W", click: () => sendCommand("close-tab") },
+        { type: "separator" },
+        { label: "Keep This Page", accelerator: "CmdOrCtrl+D", click: () => sendCommand("keep") },
+        { label: "Open the Shelf", click: () => sendCommand("shelf") },
+        { type: "separator" },
+        isMac ? { role: "close" } : { role: "quit" },
+      ],
+    },
+    { role: "editMenu" },
+    {
+      label: "View",
+      submenu: [
+        { label: "Address Bar", accelerator: "CmdOrCtrl+L", click: () => sendCommand("address") },
+        { label: "Catalogue", accelerator: "CmdOrCtrl+K", click: () => sendCommand("palette") },
+        { type: "separator" },
+        { label: "Back", accelerator: "CmdOrCtrl+[", click: () => sendCommand("back") },
+        { label: "Forward", accelerator: "CmdOrCtrl+]", click: () => sendCommand("forward") },
+        { label: "Reload", accelerator: "CmdOrCtrl+R", click: () => sendCommand("reload") },
+        {
+          label: "Hold as Reference",
+          accelerator: "CmdOrCtrl+Shift+R",
+          click: () => sendCommand("reference"),
+        },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+        { role: "toggleDevTools" },
+      ],
+    },
+    { role: "windowMenu" },
+    {
+      label: "Help",
+      submenu: [
+        { label: "Check for Updates", click: () => checkForUpdates() },
+        { label: "Post on GitHub", click: () => shell.openExternal("https://github.com/thisisbremlo/post") },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 /* ---------------------------------------------------------------- updates */
 
 const PROJECT_DIR = path.join(__dirname, "..");
@@ -437,6 +497,12 @@ app.whenReady().then(() => {
   });
   session.fromPartition(PARTITION).setPermissionCheckHandler(() => false);
 
+  // A browser saves what you download, to the folder the OS calls Downloads.
+  session.fromPartition(PARTITION).on("will-download", (_event, item) => {
+    notify({ kind: "download", title: item.getFilename() });
+  });
+
+  applyMenu();
   createWindow();
 
   setTimeout(checkForUpdates, 6000);

@@ -18,6 +18,24 @@ npm run desktop        # build the chrome and open it in Electron
 `npm run desktop` without a dev server builds the renderer to `dist/` first and loads
 it from disk, which is the shipping shape.
 
+### Install it as an app
+
+```bash
+npm install
+npm run package:mac        # release/Post-0.2.0-arm64.dmg and the .app beside it
+```
+
+Open the dmg and drag **Post** to Applications; it launches on its own, with no
+terminal and no dev server. The build is unsigned, so the first launch is right
+click → Open, or clear the quarantine flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Post.app
+```
+
+`npm run package` builds for whichever platform you are on, and `npm run package:dir`
+skips the installer when you only want the unpacked app.
+
 ## Two targets, one codebase
 
 - **Desktop (`electron/`)** — a `BaseWindow` with the chrome in one `WebContentsView`

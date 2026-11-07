@@ -10,7 +10,7 @@ import { ShelfBar } from "./components/ShelfBar";
 import { TabStrip } from "./components/TabStrip";
 import { Toolbar } from "./components/Toolbar";
 import { UpdateDialog } from "./components/UpdateDialog";
-import { bridge, type ViewRect } from "./lib/bridge";
+import { bridge, type BrowserCommand, type ViewRect } from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
 import { fileStamp } from "./lib/time";
 import { checkForUpdate, updateFromCommit, type UpdateInfo } from "./lib/updates";
@@ -433,6 +433,49 @@ export function App() {
     return () => document.removeEventListener("contextmenu", onContextMenu);
   }, [dispatch]);
 
+  // Menu items arrive as commands; the chrome already knows how to do each one.
+  useEffect(() => {
+    if (!bridge) return;
+    return bridge.onCommand((command: BrowserCommand) => {
+      const current = stateRef.current;
+      const tab = current.tabs.find((item) => item.id === current.activeId) ?? current.tabs[0];
+      switch (command) {
+        case "new-tab":
+          dispatch({ type: "open-tab", url: "scaffold://start" });
+          break;
+        case "close-tab":
+          dispatch({ type: "close-tab", id: tab.id });
+          break;
+        case "keep":
+          setKeepTabId(null);
+          setKeepOpen(true);
+          break;
+        case "shelf":
+          dispatch({ type: "navigate", url: "scaffold://shelf" });
+          break;
+        case "address":
+          window.dispatchEvent(new CustomEvent("scaffold:address"));
+          break;
+        case "palette":
+          setPaletteOpen(true);
+          break;
+        case "back":
+          dispatch({ type: "back", tabId: tab.id });
+          break;
+        case "forward":
+          dispatch({ type: "forward", tabId: tab.id });
+          break;
+        case "reload":
+          dispatch({ type: "reload", tabId: tab.id });
+          break;
+        case "reference":
+          if (current.reference?.url === tab.url) dispatch({ type: "unhold" });
+          else dispatch({ type: "hold", tabId: tab.id });
+          break;
+      }
+    });
+  }, [dispatch]);
+
   // The vault is the shell's, not the renderer's: only origin and username come back.
   useEffect(() => {
     if (!bridge) return;
@@ -472,6 +515,9 @@ export function App() {
       }
       if (event.kind === "hold" && event.url) {
         dispatch({ type: "hold", url: event.url, title: event.title });
+      }
+      if (event.kind === "download" && event.title) {
+        dispatch({ type: "notice", text: `saving ${event.title}` });
       }
     });
   }, [dispatch]);
