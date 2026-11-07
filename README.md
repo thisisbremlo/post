@@ -49,6 +49,9 @@ skips the installer when you only want the unpacked app.
   sheet* that says where the page would be, and offers to load a live frame (some
   sites refuse to be framed). It exists so the interface can be reviewed anywhere.
   Native page views and their context menus only run in the desktop app.
+- **Chromium shell (`chromium/`)** — the next engine, in its own folder: the same desk,
+  driven by `chrome.*` instead of Electron IPC, running as a real Chromium extension
+  today and as `chrome://post` once the frame patch lands. See `chromium/README.md`.
 
 State lives in the chrome: tabs, back stacks, tab groups, the shelf, sittings, the
 reference pane. It persists to the profile on disk and, in the desktop app, syncs the
@@ -147,8 +150,14 @@ account behind them; a note is a line you wrote, on this machine, and nowhere el
 What this engine cannot do, on the tin: this is Electron's Chromium, not
 ungoogled-chromium. It does not use Google services, but it cannot remove their code
 from the binary. There is no Safe Browsing, no sync, no Web Store, and DRM video is
-not guaranteed. The engine path in the concept — CEF built from ungoogled-chromium —
-is the next move, and it is weeks-per-release work, not a weekend.
+not guaranteed.
+
+The engine path is ungoogled Chromium, and it is not CEF: CEF embeds Chromium's content
+layer, while `chrome.tabs`, `chrome.management` and the Web Store live in the browser
+layer above it, so a CEF shell could never run store extensions. `chromium/` is the new
+shell — the desk on `chrome.*`, working today as a real Chromium extension, with the
+frame replacement (`chrome://post` inside Chromium's own `Browser`) as the next
+milestone. It is weeks-per-release work, not a weekend.
 
 ## Not built yet
 
@@ -156,4 +165,6 @@ is the next move, and it is weeks-per-release work, not a weekend.
   covers macOS only, and the unpacked Windows and Linux targets have no updater.
 - Turbo notes cannot be searched or pinned yet; the list is chronological, newest first.
 - Contact-sheet export, import from bookmarks, per-site width memory, annotation.
-- Extension support is deliberately absent for now; it quietly undermines the posture.
+- Full Chromium extension support is not in this Electron build; it is the reason for
+  the separate shell in `chromium/`, where extensions and the Web Store are Chromium's
+  own and need no reimplementation.

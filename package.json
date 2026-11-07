@@ -9,6 +9,11 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "shell": "npm run shell:build && npm run shell:check && node scripts/post-chromium.mjs",
+    "shell:check": "node scripts/check-shell.mjs",
+    "shell:build": "vite build --config chromium/shell/vite.config.ts",
+    "shell:dev": "vite --config chromium/shell/vite.config.ts",
+    "shell:typecheck": "tsc -p chromium/shell/tsconfig.json",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
