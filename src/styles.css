@@ -2257,249 +2257,269 @@ svg {
   color: var(--sheet);
 }
 
-/* ---------- release sheet ---------- */
+/* ---------- update surfaces ---------- */
+/*
+ * The one place Post is not cream. An update reads like a small black page:
+ * one narrow column, small prose, no versions, no shas, no diff.
+ */
 
-.release {
-  display: grid;
-  grid-template-columns: 176px minmax(0, 1fr);
-  width: 748px;
-  max-width: calc(100vw - 40px);
-  overflow: hidden;
-  border: 1px solid var(--rule);
-  border-radius: 18px;
-  background: var(--sheet);
-  box-shadow: var(--shadow-float);
+.release-note {
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 34px 38px 26px;
+  border: 1px solid #232323;
+  border-radius: 16px;
+  background: #0b0b0b;
+  color: #b4b4b4;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   animation: dialog-in 190ms var(--ease) both;
 }
 
-.release-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 26px 22px;
-  border-right: 1px solid var(--rule);
-  background: var(--cream);
-}
-
-.release-label {
-  margin: 0;
-  color: var(--ink-3);
+.release-note-kicker {
+  margin: 0 0 14px;
+  color: #6d6d6d;
   font-size: 11px;
 }
 
-.release-version {
+.release-note-title {
   margin: 0;
-  color: var(--ink);
-  font-size: 32px;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.release-sha {
-  margin: 0;
-  color: var(--ink-3);
-  font-size: 11px;
-}
-
-.release-stamp {
-  margin-top: auto;
-  padding: 2px 6px;
-  border: 1px solid var(--rule);
-  border-radius: 5px;
-  color: var(--ink-2);
-  font-size: 10.5px;
-  line-height: 1.4;
-}
-
-.release-body {
-  min-width: 0;
-  padding: 26px 28px 22px;
-}
-
-.release-title {
-  margin: 0 0 16px;
-  color: var(--ink);
-  font-size: 20px;
-  font-weight: 500;
+  color: #f4f4f4;
+  font-size: 21px;
+  font-weight: 400;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
-/* The changelog stands here as a printed plate, so it needs a mono face. */
-.release-plate {
-  max-width: 100%;
-  margin: 0;
-  padding: 14px 16px;
-  overflow-x: auto;
-  border: 0;
-  border-radius: 10px;
-  background: var(--cream);
-  color: var(--ink-2);
-  font-family: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+.release-note-body {
+  max-width: 46ch;
+  margin: 10px 0 0;
+  color: #a3a3a3;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.release-note-label {
+  margin: 26px 0 6px;
+  color: #6d6d6d;
   font-size: 11px;
-  font-variant-ligatures: none;
-  line-height: 1.42;
-  white-space: pre;
 }
 
-.release-line {
-  max-width: 54ch;
-  margin: 16px 0 0;
-  color: var(--ink-2);
+.release-note-list {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #1f1f1f;
+  list-style: none;
+}
+
+.release-note-list li {
+  padding: 9px 0;
+  border-bottom: 1px solid #1f1f1f;
+  color: #d6d6d6;
   font-size: 12.5px;
   line-height: 1.5;
 }
 
-.release-progress {
-  margin: 10px 0 0;
-  color: var(--ink-3);
-  font-size: 11px;
-  line-height: 1.4;
-  word-break: break-word;
+.release-note-fail {
+  margin: 18px 0 0;
+  color: #c9a6a0;
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 
-.release-progress.is-failed {
-  color: #a3341f;
+.release-note-log {
+  margin-left: 6px;
+  color: #e8e8e8;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.release-actions {
+.release-note-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 14px;
+  margin-top: 30px;
 }
 
-.release-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.release-note-primary {
   height: 34px;
-  padding: 0 14px;
-  border-radius: 9px;
-  background: var(--accent);
-  color: var(--sheet);
+  padding: 0 15px;
+  border-radius: 8px;
+  background: #f2f2f2;
+  color: #0b0b0b;
   font-size: 12.5px;
   font-weight: 500;
   transition: background-color 140ms var(--ease), transform 120ms var(--ease);
 }
 
-.release-primary:hover:not(:disabled) {
-  background: var(--accent-ink);
+.release-note-primary:hover:not(:disabled) {
+  background: #ffffff;
 }
 
-.release-primary:active:not(:disabled) {
+.release-note-primary:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.release-primary:disabled {
-  opacity: 0.65;
+.release-note-primary:disabled {
+  opacity: 0.55;
   cursor: default;
 }
 
-.release-link {
+.release-note-quiet {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: 8px;
-  color: var(--ink-2);
-  font-size: 12px;
-  transition: background-color 140ms var(--ease), color 140ms var(--ease);
-}
-
-.release-link:hover {
-  background: var(--cream-deep);
-  color: var(--ink);
-}
-
-.release-later {
-  height: 34px;
-  margin-left: auto;
-  padding: 0 8px;
-  border-radius: 8px;
-  color: var(--ink-3);
+  gap: 5px;
+  color: #8a8a8a;
   font-size: 12px;
   transition: color 140ms var(--ease);
 }
 
-.release-later:hover {
-  color: var(--ink);
+.release-note-quiet:hover {
+  color: #f2f2f2;
+}
+
+.release-note-actions .release-note-quiet:last-child {
+  margin-left: auto;
 }
 
 /* ---------- updates page ---------- */
 
-.updates-lede {
-  max-width: 60ch;
-  margin: 18px 0 0;
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.5;
+.updates.page {
+  background: #0b0b0b;
+  color: #a3a3a3;
 }
 
-.updates-actions {
+.updates-column {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 64px 28px 56px;
+}
+
+.updates-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 18px 0 6px;
+  justify-content: space-between;
+  margin-bottom: 54px;
+  color: #f4f4f4;
 }
 
-.changelog {
-  margin: 22px 0 0;
+.updates-where {
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.updates-name {
+  margin: 0 0 14px;
+  color: #ededed;
+  font-size: 13.5px;
+}
+
+.updates-body {
+  max-width: 52ch;
+  margin: 0;
+  color: #a3a3a3;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.updates-level {
+  margin-top: 34px;
+}
+
+.updates-section {
+  margin-top: 42px;
+}
+
+.updates-heading {
+  margin: 0 0 12px;
+  color: #ededed;
+  font-size: 13.5px;
+  font-weight: 400;
+}
+
+.updates-list {
+  margin: 0;
   padding: 0;
-  border-top: 1px solid var(--rule);
   list-style: none;
 }
 
-.changelog-row {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) 88px;
+.updates-list li {
+  position: relative;
+  padding: 7px 0 7px 20px;
+  color: #b4b4b4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.updates-list li::before {
+  position: absolute;
+  left: 0;
+  color: #4d4d4d;
+  content: "—";
+}
+
+.updates-run {
+  display: flex;
+  align-items: center;
   gap: 14px;
-  align-items: baseline;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--rule);
+  margin: 22px 0 0;
+}
+
+.updates-action {
+  color: #f2f2f2;
+  font-size: 13px;
+  text-decoration: underline;
+  text-decoration-color: #4d4d4d;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 140ms var(--ease);
+}
+
+.updates-action:hover:not(:disabled) {
+  text-decoration-color: #f2f2f2;
+}
+
+.updates-action:disabled {
+  color: #7a7a7a;
+  cursor: default;
+}
+
+.updates-quiet {
+  color: #7a7a7a;
   font-size: 12.5px;
 }
 
-.changelog-sha {
-  color: var(--ink-3);
-  font-size: 10.5px;
+.updates-fail {
+  margin: 16px 0 0;
+  color: #c9a6a0;
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 
-.changelog-title {
-  color: var(--ink);
+.updates-fail .updates-action {
+  margin-left: 6px;
+  color: #e8e8e8;
 }
 
-.changelog-date {
-  color: var(--ink-3);
-  font-size: 10.5px;
-  text-align: right;
+.updates-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #1f1f1f;
+  color: #6d6d6d;
+  font-size: 11px;
 }
 
-@media (max-width: 680px) {
-  .release {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 520px) {
+  .notice {
+    padding: 26px 22px 20px;
   }
 
-  .release-rail {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    border-right: 0;
-    border-bottom: 1px solid var(--rule);
-    padding: 18px 20px;
-  }
-
-  .release-stamp {
-    margin: 0 0 0 auto;
-  }
-
-  .release-body {
-    padding: 20px;
+  .updates-column {
+    padding: 44px 22px 40px;
   }
 }
 

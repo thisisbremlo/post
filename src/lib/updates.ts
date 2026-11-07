@@ -119,30 +119,3 @@ export async function checkForUpdate(signal?: AbortSignal): Promise<UpdateInfo |
   }
 }
 
-/**
- * The changelog as an ASCII plate: a printed colophon, not a card of chips.
- * Width is in monospace columns, so it lines up with its own frame.
- */
-export function changelogPlate(info: UpdateInfo, width = 52): string {
-  const clip = (text: string) =>
-    (text.length > width ? `${text.slice(0, width - 1)}…` : text).padEnd(width);
-  const row = (text: string) => `│${clip(text)}│`;
-  const rule = "─".repeat(width);
-  const lines = [
-    `┌${rule}┐`,
-    row(`post ${info.version}  ·  ${info.commit || "main"}`),
-    row(info.from ? `this copy is ${info.from}` : "this copy is older than main"),
-    `├${rule}┤`,
-  ];
-
-  if (info.entries.length === 0) {
-    lines.push(row("no changelog came back"));
-  } else {
-    for (const entry of info.entries) {
-      lines.push(row(`${entry.sha.slice(0, 7)}  ${entry.title}`));
-    }
-  }
-
-  lines.push(`└${rule}┘`);
-  return lines.join("\n");
-}

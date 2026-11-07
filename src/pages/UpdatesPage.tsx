@@ -1,22 +1,25 @@
 import { useEffect, useState } from "react";
 
+import { Mark } from "../components/Mark";
 import { bridge } from "../lib/bridge";
-import {
-  APP_COMMIT,
-  APP_VERSION,
-  checkForUpdate,
-  latestUpdate,
-  type UpdateInfo,
-} from "../lib/updates";
-import { Icon } from "../components/Icon";
+import { APP_VERSION, checkForUpdate, latestUpdate, type UpdateInfo } from "../lib/updates";
+import { useInstall } from "../lib/useInstall";
 
-const PULL = "git pull && npm install";
+/** The changelog as prose lines. A page you can read, not a diff you can audit. */
+function additionsOf(update: UpdateInfo): string[] {
+  const titles = update.entries.map((entry) => entry.title).filter(Boolean);
+  return titles.length > 0 ? titles : update.notes ? [update.notes] : [];
+}
 
-/** What main has that this copy does not, with the changelog and one door out. */
+/**
+ * The update site, set like a small black page: one narrow column, plain words,
+ * the newest additions, and one quiet action. No versions to compare, no shas,
+ * no diff — a designer does not need any of it.
+ */
 export function UpdatesPage() {
   const [update, setUpdate] = useState<UpdateInfo | null>(latestUpdate());
-  const [line, setLine] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { stage, install, copyLog, busy } = useInstall();
 
   // The harness has no shell to push a notice, so the page asks for itself.
   useEffect(() => {
@@ -30,92 +33,78 @@ export function UpdatesPage() {
     };
   }, [update]);
 
-  useEffect(() => {
-    if (!bridge) return;
-    return bridge.onInstallEvent((event) => {
-      setLine(event.line);
-      setBusy(event.state !== "ready" && event.state !== "failed");
-    });
-  }, []);
+  const additions = update ? additionsOf(update) : [];
 
-  const install = async () => {
-    if (!bridge) {
-      try {
-        await navigator.clipboard.writeText(PULL);
-        setLine("command copied");
-      } catch {
-        setLine("couldn't copy — select the command instead");
-      }
-      return;
-    }
-    setBusy(true);
-    setLine("starting…");
-    try {
-      if ((await bridge.installUpdate()) === "manual") {
-        setBusy(false);
-        setLine("this copy was not packaged from a checkout, so it pulls itself");
-      }
-    } catch {
-      setBusy(false);
-      setLine("couldn't start the installer");
-    }
+  const handOverLog = async () => {
+    setCopied(await copyLog());
   };
 
   return (
-    <div className="page">
-      <div className="page-inner">
-        <header className="page-head">
-          <div>
-            <h1 className="page-title">updates</h1>
-            <p className="page-meta tnum">
-              this build {APP_VERSION} · {APP_COMMIT.slice(0, 7) || "unversioned"}
-            </p>
-          </div>
+    <div className="page updates">
+      <div className="updates-column">
+        <header className="updates-head">
+          <Mark size={20} />
+          <span className="updates-where">updates</span>
         </header>
 
-        {update ? (
-          <>
-            <p className="updates-lede">
-              main is at {update.commit || "a commit this copy cannot name"}. Here is what landed
-              since {update.from || "this build"}.
-            </p>
+        <p className="updates-name">(Post) updates</p>
+        <p className="updates-body">
+          The newest additions to Post, newest first. Installing reopens the app where you left
+          off; your tabs, shelf and settings stay where they are.
+        </p>
 
-            <div className="updates-actions">
-              <button type="button" className="release-primary" disabled={busy} onClick={() => void install()}>
-                {bridge ? (busy ? "installing…" : "install and relaunch") : "copy the pull command"}
-                <Icon name="export" size={13} />
-              </button>
-              <a className="release-link" href={update.url} target="_blank" rel="noreferrer noopener">
-                the diff on GitHub
-                <Icon name="arrow-up-right" size={12} />
-              </a>
-            </div>
-
-            {line && <p className="release-progress tnum">{line}</p>}
-
-            <ol className="changelog">
-              {update.entries.map((entry, index) => (
-                <li className="changelog-row" key={`${entry.sha}-${index}`}>
-                  <span className="changelog-sha tnum">{entry.sha.slice(0, 7)}</span>
-                  <span className="changelog-title">{entry.title || "no subject"}</span>
-                  <span className="changelog-date tnum">
-                    {entry.date ? entry.date.slice(0, 10) : ""}
-                  </span>
-                </li>
+        {additions.length > 0 ? (
+          <section className="updates-section">
+            <h1 className="updates-heading">Latest</h1>
+            <ul className="updates-list">
+              {additions.map((title, index) => (
+                <li key={`${index}-${title}`}>{title}</li>
               ))}
-            </ol>
-          </>
+            </ul>
+          </section>
         ) : (
-          <p className="empty">
-            This copy is level with main. Nothing to read here until a commit lands.
+          <p className="updates-body updates-level">
+            This copy is level with the newest build. Nothing to read here until something lands.
           </p>
         )}
 
-        <p className="fineprint">
-          Updates are read from the public repo, never from a store or an account. Installing
-          builds from the checkout this copy was packaged from; your shelf, groups and sittings
-          are untouched either way.
-        </p>
+        <section className="updates-section">
+          <h2 className="updates-heading">Installing</h2>
+          <p className="updates-body">
+            Post rebuilds itself from the copy it was packaged from, then reopens. Nothing is sent
+            anywhere, and no account is involved.
+          </p>
+
+          {bridge ? (
+            <p className="updates-run">
+              <button
+                type="button"
+                className="updates-action"
+                disabled={busy || stage === "ready"}
+                onClick={() => void install()}
+              >
+                {busy ? "installing…" : stage === "failed" ? "try again" : "install and relaunch"}
+              </button>
+              {stage === "ready" && <span className="updates-quiet">reopening…</span>}
+            </p>
+          ) : (
+            <p className="updates-quiet">This preview cannot update itself.</p>
+          )}
+
+          {stage === "failed" && (
+            <p className="updates-fail">
+              It stopped before it finished.
+              <button type="button" className="updates-action" onClick={() => void handOverLog()}>
+                {copied ? "log copied" : "copy the log"}
+              </button>
+            </p>
+          )}
+        </section>
+
+        <footer className="updates-foot">
+          <span className="tnum">v{APP_VERSION}</span>
+          <Mark size={14} />
+        </footer>
       </div>
     </div>
   );

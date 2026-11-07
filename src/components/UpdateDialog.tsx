@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
 
 import { bridge } from "../lib/bridge";
-import { changelogPlate, type UpdateInfo } from "../lib/updates";
-import { usePlateWidth } from "../lib/usePlateWidth";
+import type { UpdateInfo } from "../lib/updates";
+import { useInstall } from "../lib/useInstall";
 import { Icon } from "./Icon";
 
-const PULL = "git pull && npm install";
+const SHOWN = 5;
+
+/** The changelog as a list of words, not a receipt: no versions, no shas. */
+function additionsOf(update: UpdateInfo): string[] {
+  const titles = update.entries.map((entry) => entry.title).filter(Boolean);
+  if (titles.length > 0) return titles.slice(0, SHOWN);
+  return update.notes ? [update.notes] : [];
+}
 
 /**
- * The release, as a printed sheet: a rail with the version on the left, the
- * changelog set in an ASCII plate on the right, one action that installs it and
- * one quiet door to the updates page. Nothing here glows or explains itself twice.
+ * An update is a small interruption: what is new, one button, and a way out.
+ * The technical narration only appears if the install stops, and only as a log
+ * to copy for whoever fixes it.
  */
 export function UpdateDialog({
   update,
@@ -21,10 +28,9 @@ export function UpdateDialog({
   onClose: () => void;
   onOpenUpdates: () => void;
 }) {
+  const { stage, install, copyLog, busy } = useInstall();
   const [copied, setCopied] = useState(false);
-  const [stage, setStage] = useState<"idle" | "running" | "failed" | "ready" | "manual">("idle");
-  const [line, setLine] = useState("");
-  const columns = usePlateWidth(52, 40);
+  const additions = additionsOf(update);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -34,56 +40,9 @@ export function UpdateDialog({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  // The shell reports pull, install and build as they happen, then the swap.
-  useEffect(() => {
-    if (!bridge) return;
-    return bridge.onInstallEvent((event) => {
-      setLine(event.line);
-      if (event.state === "failed") setStage("failed");
-      else if (event.state === "ready") setStage("ready");
-      else setStage("running");
-    });
-  }, []);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(PULL);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+  const handOverLog = async () => {
+    setCopied(await copyLog());
   };
-
-  const install = async () => {
-    if (!bridge) {
-      void copy();
-      return;
-    }
-    setStage("running");
-    setLine("starting…");
-    try {
-      if ((await bridge.installUpdate()) === "manual") {
-        setStage("manual");
-        setLine("this copy was not packaged from a checkout, so it pulls itself");
-      }
-    } catch {
-      setStage("manual");
-      setLine("couldn't start the installer");
-    }
-  };
-
-  const working = stage === "running";
-  const primary = !bridge
-    ? copied
-      ? "command copied"
-      : "copy the pull command"
-    : working
-      ? "installing…"
-      : stage === "failed"
-        ? "try again"
-        : stage === "ready"
-          ? "reopening…"
-          : "install and relaunch";
 
   return (
     <div
@@ -92,48 +51,56 @@ export function UpdateDialog({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="release" role="dialog" aria-modal="true" aria-label="a newer build is on main">
-        <aside className="release-rail">
-          <p className="release-label">release</p>
-          <p className="release-version tnum">{update.version}</p>
-          <p className="release-sha tnum">{update.commit || "main"}</p>
-          <span className="release-stamp">on main</span>
-        </aside>
+      <div className="release-note" role="dialog" aria-modal="true" aria-label="an update is ready">
+        <p className="release-note-kicker">update</p>
+        <h2 className="release-note-title">An update is ready.</h2>
+        <p className="release-note-body">
+          Install it and Post comes back where you left off — your tabs, shelf and settings stay
+          put.
+        </p>
 
-        <div className="release-body">
-          <h2 className="release-title">a newer build is on main</h2>
-          <pre className="release-plate">{changelogPlate(update, columns)}</pre>
+        {additions.length > 0 && (
+          <>
+            <p className="release-note-label">Newest</p>
+            <ul className="release-note-list">
+              {additions.map((title, index) => (
+                <li key={`${index}-${title}`}>{title}</li>
+              ))}
+            </ul>
+          </>
+        )}
 
-          <p className="release-line">
-            {bridge
-              ? "Installing pulls main, rebuilds, replaces this copy and reopens. Your shelf and sittings stay on this machine."
-              : "This preview cannot install. Pull the checkout, then relaunch."}
+        {stage === "failed" && (
+          <p className="release-note-fail">
+            The update stopped before it finished.
+            <button type="button" className="release-note-log" onClick={() => void handOverLog()}>
+              {copied ? "log copied" : "copy the log"}
+            </button>
           </p>
+        )}
 
-          {(stage !== "idle" || line) && (
-            <p className={"release-progress tnum" + (stage === "failed" ? " is-failed" : "")}>
-              {line}
-            </p>
-          )}
+        {stage === "manual" && <p className="release-note-fail">This copy cannot install itself.</p>}
 
-          <div className="release-actions">
+        <div className="release-note-actions">
+          {bridge ? (
             <button
               type="button"
-              className="release-primary"
-              disabled={working || stage === "ready"}
+              className="release-note-primary"
+              disabled={busy || stage === "ready"}
               onClick={() => void install()}
             >
-              {primary}
-              {!working && stage !== "ready" && <Icon name="export" size={13} />}
+              {busy ? "installing…" : stage === "failed" ? "try again" : "install and relaunch"}
             </button>
-            <button type="button" className="release-link" onClick={onOpenUpdates}>
-              what changed
-              <Icon name="arrow-up-right" size={12} />
-            </button>
-            <button type="button" className="release-later" onClick={onClose}>
-              {stage === "ready" ? "close" : "later"}
-            </button>
-          </div>
+          ) : (
+            <span className="release-note-quiet">This preview cannot update itself.</span>
+          )}
+          <button type="button" className="release-note-quiet" onClick={onOpenUpdates}>
+            what changed
+            <Icon name="arrow-up-right" size={11} />
+          </button>
+          <button type="button" className="release-note-quiet" onClick={onClose}>
+            {stage === "ready" ? "close" : "later"}
+          </button>
         </div>
       </div>
     </div>
