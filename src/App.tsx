@@ -14,7 +14,7 @@ import { bridge, type BrowserCommand, type ViewRect } from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
 import { fileStamp } from "./lib/time";
 import { checkForUpdate, updateFromCommit, type UpdateInfo } from "./lib/updates";
-import { internalPageOf, parseDomain } from "./lib/url";
+import { internalPageOf, newTabUrl, parseDomain } from "./lib/url";
 import { useActiveTab, useStore } from "./state/store";
 import type { KeptPage, Tab } from "./state/types";
 
@@ -181,7 +181,11 @@ export function App() {
           break;
         case "t":
           event.preventDefault();
-          dispatch({ type: "open-tab", url: "scaffold://start" });
+          dispatch({ type: "open-tab", url: newTabUrl(current.settings.newTab) });
+          break;
+        case ",":
+          event.preventDefault();
+          dispatch({ type: "navigate", url: "scaffold://settings" });
           break;
         case "h":
           if (event.shiftKey) {
@@ -482,7 +486,7 @@ export function App() {
       const tab = current.tabs.find((item) => item.id === current.activeId) ?? current.tabs[0];
       switch (command) {
         case "new-tab":
-          dispatch({ type: "open-tab", url: "scaffold://start" });
+          dispatch({ type: "open-tab", url: newTabUrl(current.settings.newTab) });
           break;
         case "close-tab":
           dispatch({ type: "close-tab", id: tab.id });
@@ -600,7 +604,13 @@ export function App() {
   const constrained = activeTab.width !== "fit";
 
   return (
-    <div className={"app" + (bridge?.platform === "darwin" ? " is-mac" : "")}>
+    <div
+      className={
+        "app" +
+        (bridge?.platform === "darwin" ? " is-mac" : "") +
+        (state.settings.animations === "reduced" ? " is-calm" : "")
+      }
+    >
       <TabStrip />
       <Toolbar
         onOpenPalette={() => setPaletteOpen(true)}

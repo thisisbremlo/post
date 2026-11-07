@@ -6,11 +6,21 @@ const INTERNAL_TITLES: Record<InternalPage, string> = {
   shelf: "shelf",
   sittings: "sittings",
   passwords: "passwords",
+  settings: "settings",
 };
 
 const INTERNAL_PAGES = Object.keys(INTERNAL_TITLES) as InternalPage[];
 
-export const SEARCH_URL = "https://duckduckgo.com/?q=";
+export const SEARCH_ENGINES: Record<"duckduckgo" | "google", string> = {
+  duckduckgo: "https://duckduckgo.com/?q=",
+  google: "https://www.google.com/search?q=",
+};
+
+export const SEARCH_URL = SEARCH_ENGINES.duckduckgo;
+
+/** A fresh tab is Chrome's: the empty Google page, unless settings say otherwise. */
+export const newTabUrl = (page: "google" | "start"): string =>
+  page === "start" ? "scaffold://start" : "https://www.google.com";
 
 /** A search is the fallback, so this only has to recognise addresses. */
 export function looksLikeAddress(input: string): boolean {
@@ -29,9 +39,14 @@ export function normalizeAddress(input: string): string {
   return `https://${value}`;
 }
 
-export function addressToUrl(input: string): string {
+export function addressToUrl(
+  input: string,
+  engine: keyof typeof SEARCH_ENGINES = "duckduckgo",
+): string {
   const value = input.trim();
-  return looksLikeAddress(value) ? normalizeAddress(value) : SEARCH_URL + encodeURIComponent(value);
+  return looksLikeAddress(value)
+    ? normalizeAddress(value)
+    : SEARCH_ENGINES[engine] + encodeURIComponent(value);
 }
 
 export function internalPageOf(url: string): InternalPage | null {

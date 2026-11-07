@@ -6,6 +6,7 @@ import type {
   GroupColor,
   HistoryEntry,
   ScaffoldState,
+  Settings,
   Sitting,
   Tab,
   TabGroup,
@@ -14,6 +15,7 @@ import type {
 
 const STORAGE_KEY = "scaffold.state.v1";
 const HISTORY_LIMIT = 400;
+const DEFAULT_SETTINGS: Settings = { newTab: "google", search: "duckduckgo", animations: "full" };
 /** Blue leads because it is the brand's; red stays readable for groups already filed. */
 const GROUP_COLORS: GroupColor[] = ["blue", "green", "amber", "violet"];
 
@@ -71,6 +73,7 @@ function initialState(): ScaffoldState {
     shelf: [],
     history: [],
     sittings: [],
+    settings: DEFAULT_SETTINGS,
     shelfBarOpen: true,
     notice: null,
   };
@@ -103,6 +106,7 @@ export type Action =
   | { type: "restore-sitting"; id: string }
   | { type: "delete-sitting"; id: string }
   | { type: "clear-history" }
+  | { type: "settings"; settings: Partial<Settings> }
   | { type: "notice"; text: string | null };
 
 function recordHistory(history: HistoryEntry[], url: string, title: string): HistoryEntry[] {
@@ -462,6 +466,9 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
     case "clear-history":
       return { ...state, history: [] };
 
+    case "settings":
+      return { ...state, settings: { ...DEFAULT_SETTINGS, ...state.settings, ...action.settings } };
+
     case "notice":
       return { ...state, notice: action.text };
 
@@ -497,6 +504,7 @@ function restore(): ScaffoldState {
       : fallback.tabs;
     const groups = rawGroups.filter((group) => tabs.some((tab) => tab.groupId === group.id));
     const activeId = tabs.some((tab) => tab.id === parsed.activeId) ? parsed.activeId! : tabs[0].id;
+    const stored = (parsed.settings ?? {}) as Partial<Settings>;
     return {
       ...fallback,
       ...parsed,
@@ -506,6 +514,11 @@ function restore(): ScaffoldState {
       shelf: Array.isArray(parsed.shelf) ? parsed.shelf : [],
       history: Array.isArray(parsed.history) ? parsed.history : [],
       sittings: Array.isArray(parsed.sittings) ? parsed.sittings : [],
+      settings: {
+        newTab: stored.newTab === "start" ? "start" : "google",
+        search: stored.search === "google" ? "google" : "duckduckgo",
+        animations: stored.animations === "reduced" ? "reduced" : "full",
+      },
       shelfBarOpen: parsed.shelfBarOpen !== false,
       notice: null,
     };

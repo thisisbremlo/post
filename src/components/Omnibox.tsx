@@ -10,7 +10,7 @@ import { Icon } from "./Icon";
  * about. Typing something that is not an address searches.
  */
 export function Omnibox({ tab }: { tab: Tab }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const [value, setValue] = useState(tab.url);
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -63,7 +63,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
   }, []);
 
   const commit = () => {
-    const next = addressToUrl(value);
+    const next = addressToUrl(value, state.settings.search);
     if (next !== tab.url) dispatch({ type: "navigate", tabId: tab.id, url: next });
     else if (next.startsWith("http")) dispatch({ type: "reload", tabId: tab.id });
     setEditing(false);

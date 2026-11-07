@@ -2062,3 +2062,197 @@ svg {
     transition-duration: 1ms !important;
   }
 }
+
+/* ---------- micro-motion ---------- */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(-3px) scaleX(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-3px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes notice-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tab { animation: tab-in 160ms var(--ease) both; }
+.tab-group { animation: fade-in 160ms var(--ease) both; }
+.page-inner { animation: page-in 200ms var(--ease) both; }
+.menu { animation: menu-in 130ms var(--ease) both; transform-origin: top left; }
+.overlay { animation: overlay-in 130ms ease-out both; }
+.keep, .palette { animation: dialog-in 190ms var(--ease) both; }
+.notice { animation: notice-in 200ms var(--ease) both; }
+.palette-row { animation: fade-in 150ms var(--ease) both; }
+
+.icon-btn {
+  transition: background-color 140ms var(--ease), color 140ms var(--ease),
+    transform 120ms var(--ease);
+}
+
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+/* The plus sits against the last tab, and turns as it is pressed. */
+.tab-new {
+  margin-left: -4px;
+  transition: background-color 140ms var(--ease), color 140ms var(--ease),
+    transform 220ms var(--ease);
+}
+
+.tab-new:hover {
+  transform: rotate(90deg);
+}
+
+.tab-new:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+.shelf-chip,
+.palette-chip,
+.update-chip,
+.primary,
+.update-go,
+.text-action,
+.choice-pill,
+.omnibox-save,
+.omnibox-copy {
+  transition: background-color 140ms var(--ease), color 140ms var(--ease),
+    border-color 140ms var(--ease), box-shadow 140ms var(--ease),
+    transform 120ms var(--ease);
+}
+
+.shelf-chip:hover {
+  transform: translateY(-1px);
+}
+
+.shelf-chip:active,
+.palette-chip:active,
+.update-chip:active,
+.primary:active,
+.update-go:active,
+.choice-pill:active {
+  transform: scale(0.97);
+}
+
+.tab:hover .tab-mark {
+  transform: scale(1.08);
+}
+
+.tab-mark {
+  transition: color 140ms var(--ease), transform 140ms var(--ease);
+}
+
+/* Off is instant, everywhere: one switch in settings, and the OS preference. */
+.is-calm *,
+.is-calm *::before,
+.is-calm *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* ---------- settings ---------- */
+
+.settings-list {
+  display: grid;
+  margin: 6px 0 26px;
+  border-top: 1px solid var(--rule);
+}
+
+.setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 28px;
+  padding: 18px 2px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.setting-copy {
+  min-width: 220px;
+}
+
+.setting-name {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.setting-note {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.choice {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--cream-soft);
+}
+
+.choice-pill {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 7px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.choice-pill:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.choice-pill.is-on {
+  background: var(--accent);
+  color: var(--sheet);
+}
+
+.choice-pill.is-on:hover {
+  background: var(--accent-ink);
+  color: var(--sheet);
+}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { DragEvent as ReactDragEvent, ReactNode } from "react";
 
-import { internalPageOf } from "../lib/url";
+import { internalPageOf, newTabUrl } from "../lib/url";
 import { useStore } from "../state/store";
 import type { Tab, TabGroup } from "../state/types";
 import { Icon } from "./Icon";
@@ -14,6 +14,7 @@ const PAGE_ICONS: Record<string, IconName> = {
   history: "clock",
   sittings: "tab",
   passwords: "key",
+  settings: "settings",
 };
 
 function iconFor(url: string): IconName {
@@ -214,7 +215,7 @@ export function TabStrip() {
         className="tab-new"
         aria-label="new tab"
         title="new tab (⌘T)"
-        onClick={() => dispatch({ type: "open-tab", url: "scaffold://start" })}
+        onClick={() => dispatch({ type: "open-tab", url: newTabUrl(state.settings.newTab) })}
       >
         <Icon name="plus" size={15} />
       </button>

@@ -1,5 +1,9 @@
+import { useState } from "react";
+
 import type { UpdateInfo } from "../lib/updates";
 import { useActiveTab, useStore } from "../state/store";
+import { ContextMenu } from "./ContextMenu";
+import type { MenuItem } from "./ContextMenu";
 import { Icon } from "./Icon";
 import { Omnibox } from "./Omnibox";
 import { WidthPills } from "./WidthPills";
@@ -16,6 +20,43 @@ export function Toolbar({
   const { state, dispatch } = useStore();
   const tab = useActiveTab();
   const held = state.reference?.url === tab.url;
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // The three dots are the browser's own drawer: places to go, settings to change.
+  const tools: MenuItem[] = [
+    {
+      id: "settings",
+      label: "settings",
+      icon: "settings",
+      hint: "⌘,",
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://settings" }),
+    },
+    {
+      id: "history",
+      label: "history",
+      icon: "clock",
+      separatorBefore: true,
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://history" }),
+    },
+    {
+      id: "sittings",
+      label: "sittings",
+      icon: "tab",
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://sittings" }),
+    },
+    {
+      id: "shelf",
+      label: "shelf",
+      icon: "sheets",
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://shelf" }),
+    },
+    {
+      id: "passwords",
+      label: "passwords",
+      icon: "key",
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://passwords" }),
+    },
+  ];
 
   return (
     <header className="toolbar">
@@ -134,6 +175,27 @@ export function Toolbar({
         <Icon name="search" size={13} />
         <span className="tnum palette-chip-keys">⌘K</span>
       </button>
+
+      <button
+        type="button"
+        className={"icon-btn" + (menu ? " is-on" : "")}
+        aria-label="browser menu"
+        aria-haspopup="menu"
+        aria-expanded={Boolean(menu)}
+        title="the browser menu"
+        onClick={(event) => {
+          if (menu) {
+            setMenu(null);
+            return;
+          }
+          const box = event.currentTarget.getBoundingClientRect();
+          setMenu({ x: box.right - 264, y: box.bottom + 6 });
+        }}
+      >
+        <Icon name="more" size={16} />
+      </button>
+
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={tools} onClose={() => setMenu(null)} />}
 
     </header>
   );

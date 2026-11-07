@@ -10,7 +10,22 @@ export interface TabGroup {
   collapsed: boolean;
 }
 
-export type InternalPage = "start" | "history" | "shelf" | "sittings" | "passwords";
+export type InternalPage =
+  | "start"
+  | "history"
+  | "shelf"
+  | "sittings"
+  | "passwords"
+  | "settings";
+
+export interface Settings {
+  /** What the plus button and ⌘T open. */
+  newTab: "google" | "start";
+  /** Where a search goes. */
+  search: "duckduckgo" | "google";
+  /** Full micro-motion, or none of it. */
+  animations: "full" | "reduced";
+}
 
 export interface Tab {
   id: string;
@@ -65,6 +80,8 @@ export interface ScaffoldState {
   shelf: KeptPage[];
   history: HistoryEntry[];
   sittings: Sitting[];
+  /** Browser behaviour, the only things worth a preference. */
+  settings: Settings;
   /** The shelf bar is dismissed from the bottom of the desk, not emptied. */
   shelfBarOpen: boolean;
   /** Ephemeral one-line confirmation, never persisted. */

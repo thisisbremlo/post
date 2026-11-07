@@ -54,7 +54,7 @@ export function Palette({ onClose }: { onClose: () => void }) {
         kind: "address",
         title: address ? normalizeAddress(trimmed) : `search for “${trimmed}”`,
         meta: address ? "address" : "search",
-        url: addressToUrl(trimmed),
+        url: addressToUrl(trimmed, state.settings.search),
       });
     }
 
@@ -102,7 +102,7 @@ export function Palette({ onClose }: { onClose: () => void }) {
     }
 
     return out;
-  }, [query, state.tabs, state.shelf, state.history]);
+  }, [query, state.tabs, state.shelf, state.history, state.settings.search]);
 
   useEffect(() => {
     inputRef.current?.focus();

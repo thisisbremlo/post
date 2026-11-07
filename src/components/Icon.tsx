@@ -18,12 +18,14 @@ import {
   Library,
   Link,
   Monitor,
+  MoreHorizontal,
   Pin,
   PinOff,
   Plus,
   Quote,
   RotateCw,
   Search,
+  SlidersHorizontal,
   Smartphone,
   Tablet,
   Trash2,
@@ -44,6 +46,8 @@ export type IconName =
   | "key"
   | "export"
   | "search"
+  | "more"
+  | "settings"
   | "arrow-up-right"
   | "trash"
   | "chevron-down"
@@ -78,6 +82,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   key: KeyRound,
   export: Download,
   search: Search,
+  more: MoreHorizontal,
+  settings: SlidersHorizontal,
   "arrow-up-right": ArrowUpRight,
   trash: Trash2,
   "chevron-down": ChevronDown,
