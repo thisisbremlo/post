@@ -112,7 +112,11 @@ export function Toolbar({
           type="button"
           className="update-chip"
           aria-label="an update is ready"
-          title={`main is newer${update.commit ? ` (${update.commit})` : ""} — pull it and relaunch`}
+          title={
+            update.commit && update.commit !== update.from
+              ? `main is at ${update.commit} — pull it and relaunch`
+              : `Post ${update.version} is on main — pull it and relaunch`
+          }
           onClick={onOpenUpdate}
         >
           <Icon name="export" size={13} />

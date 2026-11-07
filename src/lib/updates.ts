@@ -49,7 +49,7 @@ export function updateFromCommit(notice: UpdateNotice): UpdateInfo | null {
     from: APP_COMMIT.slice(0, 7),
     notes: notice.notes,
     url:
-      notice.sha && APP_COMMIT
+      notice.sha && APP_COMMIT && notice.sha !== APP_COMMIT
         ? `https://github.com/${REPO}/compare/${APP_COMMIT}...${notice.sha}`
         : `https://github.com/${REPO}`,
   };

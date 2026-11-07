@@ -41,9 +41,13 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
         </p>
         <p className="update-title">A newer build is on main</p>
         <p className="update-line">
-          This build is from {update.from || "an older commit"}; main is{" "}
-          {update.commit ? `at ${update.commit}` : `on ${update.version}`}. Pull it, then relaunch.
-          Nothing of yours moves — the shelf, the groups and the sittings live on this machine.
+          {update.commit && update.commit !== update.from ? (
+            <>This build is from {update.from || "an older commit"}; main is at {update.commit}.</>
+          ) : (
+            <>This build is older than the published Post {update.version} on main.</>
+          )}{" "}
+          Pull it, then relaunch. Nothing of yours moves — the shelf, the groups and the sittings
+          live on this machine.
         </p>
 
         <div className="update-cmd">
