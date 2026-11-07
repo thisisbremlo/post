@@ -24,6 +24,7 @@ export function ExtensionsMenu({
   const [items, setItems] = useState<ExtensionInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [storeUrl, setStoreUrl] = useState("");
   const shell = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,6 +87,23 @@ export function ExtensionsMenu({
     }
   };
 
+  const installFromStore = async () => {
+    if (!bridge || busy || !storeUrl.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const list = await bridge.installFromStore(storeUrl.trim());
+      setItems(list);
+      onChange(list);
+      setStoreUrl("");
+      window.dispatchEvent(new CustomEvent("scaffold:extensions-changed"));
+    } catch {
+      setError("that extension could not run — it may need Chrome-only APIs");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div
       ref={shell}
@@ -133,11 +151,39 @@ export function ExtensionsMenu({
         </ul>
       ) : (
         <p className="extensions-empty">
-          Nothing installed yet. Post runs unpacked Chrome extensions, kept in this profile.
+          Nothing installed yet. Add an unpacked folder, or paste a link from the Chrome Web
+          Store.
         </p>
       )}
 
       {error && <p className="extensions-error">{error}</p>}
+
+      {bridge && (
+        <form
+          className="extensions-store"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void installFromStore();
+          }}
+        >
+          <input
+            className="extensions-store-input"
+            value={storeUrl}
+            placeholder="Chrome Web Store link"
+            aria-label="Chrome Web Store link"
+            spellCheck={false}
+            disabled={busy}
+            onChange={(event) => setStoreUrl(event.target.value)}
+          />
+          <button
+            type="submit"
+            className="extensions-store-go"
+            disabled={busy || !storeUrl.trim()}
+          >
+            get
+          </button>
+        </form>
+      )}
 
       {bridge ? (
         <button type="button" className="extensions-add" disabled={busy} onClick={() => void add()}>
@@ -149,7 +195,8 @@ export function ExtensionsMenu({
       )}
 
       <p className="extensions-foot">
-        Some permissions — camera, microphone, location — stay refused.
+        Store installs use Chrome's CRX format. Extensions that need Chrome-only APIs may not
+        run; camera, microphone and location stay refused.
       </p>
 
       <button type="button" className="extensions-close" onClick={onClose} aria-label="close">

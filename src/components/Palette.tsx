@@ -224,7 +224,7 @@ export function Palette({ onClose }: { onClose: () => void }) {
         <div className="palette-foot tnum">
           <span>↑↓ move</span>
           <span>↵ open</span>
-          <span>⌘D keep</span>
+          <span>⌘⇧D keep</span>
           <span>⌘⇧R hold</span>
           <span className="palette-foot-right">{state.shelf.length} on the shelf</span>
         </div>

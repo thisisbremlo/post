@@ -2451,6 +2451,328 @@ svg {
   color: var(--ink);
 }
 
+/* ---------- bookmarks ---------- */
+
+.omnibox-star {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: var(--ink-2);
+}
+
+.omnibox-star:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.omnibox-star.is-bookmarked {
+  color: var(--accent);
+}
+
+.omnibox-star .icon {
+  transition: fill 120ms var(--ease), color 120ms var(--ease);
+}
+
+.omnibox-star.is-bookmarked .icon {
+  fill: currentColor;
+}
+
+.bookmarks-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+  padding: 0 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--rule);
+  background: var(--cream-soft);
+  scrollbar-width: none;
+}
+
+.bookmarks-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.bookmark-chip {
+  display: inline-flex;
+  max-width: 190px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.bookmark-chip:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.bookmark-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmark-chip.is-folder {
+  color: var(--ink-2);
+}
+
+.bookmarks-all {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  border-radius: 7px;
+  color: var(--ink-3);
+}
+
+.bookmarks-all:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+/* the star's editor, built on the keep dialog */
+
+.bookmark-dialog {
+  width: min(470px, calc(100vw - 40px));
+}
+
+.bookmark-kicker {
+  margin: 0 0 10px;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+
+.bookmark-fields {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 14px;
+}
+
+.bookmark-field {
+  display: grid;
+  gap: 5px;
+}
+
+.bookmark-label {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.bookmark-input {
+  width: 100%;
+}
+
+.bookmark-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.bookmark-hint {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.bookmark-save {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--cream-soft);
+  font-size: 12px;
+}
+
+.bookmark-save:hover {
+  background: var(--accent);
+}
+
+.bookmark-delete {
+  padding: 4px 0;
+  color: var(--danger, #9a3b28);
+  font-size: 11.5px;
+}
+
+.bookmark-delete:hover {
+  color: var(--ink);
+}
+
+/* the manager */
+
+.bookmark-search {
+  display: flex;
+  height: 44px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  color: var(--ink-3);
+}
+
+.bookmark-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.bookmark-search-count {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.bookmark-folder {
+  margin-bottom: 26px;
+}
+
+.bookmark-folder-title {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.bookmark-list {
+  display: grid;
+}
+
+.bookmark-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.bookmark-open {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+  padding: 11px 2px;
+  text-align: left;
+}
+
+.bookmark-open:hover .bookmark-name {
+  color: var(--accent);
+}
+
+.bookmark-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-url {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-remove {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: var(--ink-3);
+  opacity: 0;
+}
+
+.bookmark-row:hover .bookmark-remove {
+  opacity: 1;
+}
+
+.bookmark-remove:hover {
+  background: var(--cream-deep);
+  color: var(--danger, #9a3b28);
+}
+
+/*
+ * While a menu or dialog floats over a native page, the chrome steps out of the
+ * way: its paper becomes transparent so the page below remains visible, and the
+ * shell raises this view above the page. The window's own cream shows at edges.
+ */
+
+html.is-overlay,
+html.is-overlay body,
+html.is-overlay #root,
+html.is-overlay .app,
+html.is-overlay .desk,
+html.is-overlay .stage,
+html.is-overlay .stage.is-ruled,
+html.is-overlay .sheet,
+html.is-overlay .native-surface {
+  background: transparent !important;
+}
+
+.extensions-store {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.extensions-store-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: var(--cream-soft);
+  color: var(--ink);
+  font-size: 11.5px;
+  outline: none;
+}
+
+.extensions-store-input:focus {
+  border-color: var(--ink-2);
+}
+
+.extensions-store-go {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--cream-soft);
+  font-size: 11.5px;
+}
+
+.extensions-store-go:disabled {
+  opacity: 0.4;
+}
+
 .choice {
   display: inline-flex;
   gap: 2px;

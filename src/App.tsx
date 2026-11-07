@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { BookmarkDialog } from "./components/BookmarkDialog";
+import { BookmarksBar } from "./components/BookmarksBar";
 import { ContextMenu } from "./components/ContextMenu";
 import type { MenuItem } from "./components/ContextMenu";
 import { ExtensionsMenu } from "./components/ExtensionsMenu";
@@ -25,7 +27,7 @@ import { fileStamp } from "./lib/time";
 import { checkForUpdate, updateFromCommit, type UpdateInfo } from "./lib/updates";
 import { internalPageOf, newTabUrl, parseDomain } from "./lib/url";
 import { useActiveTab, useStore } from "./state/store";
-import type { KeptPage, Tab } from "./state/types";
+import type { Bookmark, KeptPage, Tab } from "./state/types";
 
 function rectOf(element: HTMLElement | null | undefined): ViewRect | null {
   if (!element) return null;
@@ -78,6 +80,7 @@ export function App() {
   const activeTab = useActiveTab();
   const [keepOpen, setKeepOpen] = useState(false);
   const [keepTabId, setKeepTabId] = useState<string | null>(null);
+  const [bookmarkTabId, setBookmarkTabId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
@@ -94,6 +97,18 @@ export function App() {
   stateRef.current = state;
 
   const keepTab = state.tabs.find((tab) => tab.id === keepTabId) ?? activeTab;
+  const bookmarkTab = state.tabs.find((tab) => tab.id === bookmarkTabId) ?? null;
+  const floating =
+    keepOpen ||
+    paletteOpen ||
+    updateOpen ||
+    bookmarkTab !== null ||
+    metaSheet !== null ||
+    menu !== null ||
+    turbo !== null ||
+    extMenu !== null ||
+    toolsOpen;
+  const overlaysNative = bridge !== null && floating && internalPageOf(activeTab.url) === null;
 
   // One dialog per new build, not per launch: closing it is enough until main moves again.
   const seenKey = (info: UpdateInfo) => info.commit || info.version;
@@ -119,12 +134,29 @@ export function App() {
     setUpdateOpen(false);
   };
 
-  // ⌘D, and the toolbar button, both open the same one-line note.
+  // The star and ⌘D open the same bookmark editor.
+  const openBookmark = (tab: Tab) => {
+    if (internalPageOf(tab.url) !== null) return;
+    dispatch({ type: "bookmark-add", url: tab.url, title: tab.title });
+    setBookmarkTabId(tab.id);
+  };
+
+  // ⌘⇧D, and the toolbar button, both open the same one-line note.
   useEffect(() => {
     const open = () => setKeepOpen(true);
     window.addEventListener("scaffold:keep", open);
     return () => window.removeEventListener("scaffold:keep", open);
   }, []);
+
+  useEffect(() => {
+    const open = () => {
+      const current = stateRef.current;
+      const tab = current.tabs.find((item) => item.id === current.activeId) ?? current.tabs[0];
+      if (tab) openBookmark(tab);
+    };
+    window.addEventListener("scaffold:bookmark", open);
+    return () => window.removeEventListener("scaffold:bookmark", open);
+  }, [dispatch]);
 
   // The shell reads main through the checkout's own git remote, so a private
   // repo needs no token; the harness asks the public feed instead.
@@ -206,6 +238,7 @@ export function App() {
         setMenu(null);
         setUpdateOpen(false);
         setExtMenu(null);
+        setBookmarkTabId(null);
         setMetaSheet(null);
         return;
       }
@@ -214,7 +247,11 @@ export function App() {
       switch (key) {
         case "d":
           event.preventDefault();
-          setKeepOpen(true);
+          if (event.shiftKey) setKeepOpen(true);
+          else if (internalPageOf(tab.url) === null) {
+            dispatch({ type: "bookmark-add", url: tab.url, title: tab.title });
+            setBookmarkTabId(tab.id);
+          }
           break;
         case "k":
           event.preventDefault();
@@ -252,6 +289,15 @@ export function App() {
           window.dispatchEvent(new CustomEvent("scaffold:address"));
           break;
         // No pointer needed to group: ⌘⇧G folds this tab in with the one beside it.
+        case "b":
+          if (event.shiftKey) {
+            event.preventDefault();
+            dispatch({
+              type: "settings",
+              settings: { bookmarksBar: !current.settings.bookmarksBar },
+            });
+          }
+          break;
         case "g":
           if (event.shiftKey) {
             event.preventDefault();
@@ -304,6 +350,35 @@ export function App() {
       }
       setMenu(null);
     };
+
+    const bookmarkItems = (bookmark: Bookmark): MenuItem[] => [
+      {
+        id: "bookmark-open",
+        label: "open bookmark",
+        icon: "arrow-up-right",
+        onSelect: () => dispatch({ type: "navigate", url: bookmark.url }),
+      },
+      {
+        id: "bookmark-new-tab",
+        label: "open in a new tab",
+        icon: "plus",
+        onSelect: () => dispatch({ type: "open-tab", url: bookmark.url }),
+      },
+      {
+        id: "bookmark-copy",
+        label: "copy address",
+        icon: "copy",
+        onSelect: () => void copyAddress(bookmark.url),
+      },
+      {
+        id: "bookmark-remove",
+        label: "remove bookmark",
+        icon: "trash",
+        danger: true,
+        separatorBefore: true,
+        onSelect: () => dispatch({ type: "bookmark-remove", id: bookmark.id }),
+      },
+    ];
 
     const readMeta = async (tab: Tab): Promise<PageMeta | null> => {
       if (!bridge || internalPageOf(tab.url)) return null;
@@ -393,12 +468,25 @@ export function App() {
 
       const kept = current.shelf.some((page) => page.url === tab.url);
       if (internalPageOf(tab.url) === null) {
+        const bookmarked = current.bookmarks.some((bookmark) => bookmark.url === tab.url);
+        items.push({
+          id: "bookmark",
+          label: bookmarked ? "edit the bookmark" : "bookmark this page",
+          icon: "star",
+          hint: "⌘D",
+          separatorBefore: items.length > 0,
+          onSelect: () => {
+            dispatch({ type: "bookmark-add", url: tab.url, title: tab.title });
+            setBookmarkTabId(tab.id);
+            setMenu(null);
+          },
+        });
         items.push({
           id: "keep",
           label: kept ? "update the note on the shelf" : "keep this page on the shelf",
           icon: "bookmark",
-          hint: "⌘D",
-          separatorBefore: items.length > 0,
+          hint: "⌘⇧D",
+          separatorBefore: true,
           onSelect: () => keepFromMenu(tab.id),
         });
       }
@@ -467,7 +555,7 @@ export function App() {
           id: "keep",
           label: "keep this page on the shelf",
           icon: "bookmark",
-          hint: "⌘D",
+          hint: "⌘⇧D",
           onSelect: () => keepFromMenu(active.id),
         });
       }
@@ -649,6 +737,7 @@ export function App() {
       const current = stateRef.current;
       const tabEl = target.closest<HTMLElement>("[data-tab-id]");
       const cardEl = target.closest<HTMLElement>("[data-card-id]");
+      const bookmarkEl = target.closest<HTMLElement>("[data-bookmark-id]");
       const shelfButton = target.closest<HTMLElement>("[data-shelf-button]");
       let items: MenuItem[] | null = null;
 
@@ -658,6 +747,11 @@ export function App() {
       } else if (cardEl) {
         const card = current.shelf.find((page) => page.id === cardEl.dataset.cardId);
         if (card) items = cardItems(card);
+      } else if (bookmarkEl) {
+        const bookmark = current.bookmarks.find(
+          (item) => item.id === bookmarkEl.dataset.bookmarkId,
+        );
+        if (bookmark) items = bookmarkItems(bookmark);
       } else if (shelfButton) {
         items = shelfItems();
       } else if (target.closest(".reference") && current.reference) {
@@ -760,21 +854,16 @@ export function App() {
     });
   }, [dispatch]);
 
-  // Native views sit above the chrome, so a modal must lift them out of the way.
+  // Native views sit above the chrome, so the shell raises the chrome and makes
+  // its stage transparent while a surface floats; the page stays visible behind.
   useEffect(() => {
-    // A native page paints above the chrome, so every surface that floats over
-    // it — dialogs, menus, turbo notes — has to lift the views out of the way.
-    bridge?.setOverlay(
-      keepOpen ||
-        paletteOpen ||
-        updateOpen ||
-        metaSheet !== null ||
-        menu !== null ||
-        turbo !== null ||
-        extMenu !== null ||
-        toolsOpen,
-    );
-  }, [keepOpen, paletteOpen, updateOpen, metaSheet, menu, turbo, extMenu, toolsOpen]);
+    bridge?.setOverlay(floating);
+  }, [floating]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("is-overlay", overlaysNative);
+    return () => document.documentElement.classList.remove("is-overlay");
+  }, [overlaysNative]);
 
   useEffect(() => {
     if (!bridge) return;
@@ -821,6 +910,7 @@ export function App() {
       className={
         "app" +
         (bridge?.platform === "darwin" ? " is-mac" : "") +
+        (overlaysNative ? " is-overlay" : "") +
         (state.settings.animations === "reduced" ? " is-calm" : "")
       }
     >
@@ -844,6 +934,8 @@ export function App() {
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
       />
+
+      <BookmarksBar />
 
       <main className="desk">
         {state.reference && (
@@ -878,6 +970,9 @@ export function App() {
             setKeepTabId(null);
           }}
         />
+      )}
+      {bookmarkTab && (
+        <BookmarkDialog tab={bookmarkTab} onClose={() => setBookmarkTabId(null)} />
       )}
       {update && updateOpen && (
         <UpdateDialog

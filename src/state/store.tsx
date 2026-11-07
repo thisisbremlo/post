@@ -3,6 +3,7 @@ import type { Dispatch, ReactNode } from "react";
 
 import { internalPageOf, parseDomain, titleFor } from "../lib/url";
 import type {
+  Bookmark,
   GroupColor,
   HistoryEntry,
   Note,
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
   startup: "restore",
   zoom: 100,
   doNotTrack: false,
+  bookmarksBar: true,
   animations: "full",
 };
 /** Blue leads because it is the brand's; red stays readable for groups already filed. */
@@ -82,6 +84,7 @@ function initialState(): ScaffoldState {
     history: [],
     sittings: [],
     notes: [],
+    bookmarks: [],
     settings: DEFAULT_SETTINGS,
     shelfBarOpen: true,
     notice: null,
@@ -121,6 +124,9 @@ export type Action =
   | { type: "clear-history" }
   | { type: "note-add"; text: string }
   | { type: "note-remove"; id: string }
+  | { type: "bookmark-add"; url: string; title: string; folder?: string | null }
+  | { type: "bookmark-update"; id: string; title?: string; folder?: string | null }
+  | { type: "bookmark-remove"; id: string }
   | { type: "settings"; settings: Partial<Settings> }
   | { type: "notice"; text: string | null };
 
@@ -536,6 +542,41 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
     case "note-remove":
       return { ...state, notes: state.notes.filter((note) => note.id !== action.id) };
 
+    case "bookmark-add": {
+      if (internalPageOf(action.url)) return state;
+      if (state.bookmarks.some((bookmark) => bookmark.url === action.url)) return state;
+      const bookmark: Bookmark = {
+        id: uid(),
+        url: action.url,
+        title: action.title.trim() || titleFor(action.url),
+        folder: action.folder?.trim() || null,
+        addedAt: Date.now(),
+      };
+      return { ...state, bookmarks: [bookmark, ...state.bookmarks], notice: "bookmarked" };
+    }
+
+    case "bookmark-update":
+      return {
+        ...state,
+        bookmarks: state.bookmarks.map((bookmark) =>
+          bookmark.id === action.id
+            ? {
+                ...bookmark,
+                title: action.title?.trim() || bookmark.title,
+                folder:
+                  action.folder === undefined ? bookmark.folder : action.folder?.trim() || null,
+              }
+            : bookmark,
+        ),
+      };
+
+    case "bookmark-remove":
+      return {
+        ...state,
+        bookmarks: state.bookmarks.filter((bookmark) => bookmark.id !== action.id),
+        notice: "bookmark removed",
+      };
+
     case "settings":
       return { ...state, settings: { ...DEFAULT_SETTINGS, ...state.settings, ...action.settings } };
 
@@ -572,8 +613,25 @@ function restore(): ScaffoldState {
       startup: stored.startup === "fresh" ? "fresh" : "restore",
       zoom: stored.zoom === 90 || stored.zoom === 110 || stored.zoom === 125 ? stored.zoom : 100,
       doNotTrack: stored.doNotTrack === true,
+      bookmarksBar: stored.bookmarksBar !== false,
       animations: stored.animations === "reduced" ? "reduced" : "full",
     };
+    const bookmarks = Array.isArray(parsed.bookmarks)
+      ? (parsed.bookmarks as Bookmark[])
+          .filter((bookmark) => bookmark && typeof bookmark.id === "string" && typeof bookmark.url === "string")
+          .map((bookmark) => ({
+            ...bookmark,
+            title:
+              typeof bookmark.title === "string" && bookmark.title.trim()
+                ? bookmark.title
+                : titleFor(bookmark.url),
+            folder:
+              typeof bookmark.folder === "string" && bookmark.folder.trim()
+                ? bookmark.folder.trim()
+                : null,
+            addedAt: typeof bookmark.addedAt === "number" ? bookmark.addedAt : Date.now(),
+          }))
+      : [];
     const restored = Array.isArray(parsed.tabs) && parsed.tabs.length > 0
       ? parsed.tabs.map((tab) => ({
           ...tab,
@@ -596,6 +654,7 @@ function restore(): ScaffoldState {
       history: Array.isArray(parsed.history) ? parsed.history : [],
       sittings: Array.isArray(parsed.sittings) ? parsed.sittings : [],
       notes: Array.isArray(parsed.notes) ? parsed.notes : [],
+      bookmarks,
       settings,
       shelfBarOpen: parsed.shelfBarOpen !== false,
       notice: null,

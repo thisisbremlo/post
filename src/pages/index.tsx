@@ -1,4 +1,5 @@
 import { internalPageOf } from "../lib/url";
+import { BookmarksPage } from "./BookmarksPage";
 import { HistoryPage } from "./HistoryPage";
 import { SettingsPage } from "./SettingsPage";
 import { ShelfPage } from "./ShelfPage";
@@ -21,6 +22,8 @@ export function PageByUrl({ url, title }: { url: string; title: string }) {
       return <SettingsPage />;
     case "updates":
       return <UpdatesPage />;
+    case "bookmarks":
+      return <BookmarksPage />;
     case "start":
     default:
       return <StartPage key={title} />;

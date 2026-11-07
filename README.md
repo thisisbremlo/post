@@ -59,14 +59,15 @@ and every group comes back as it was, collapsed ones included.
 
 | | |
 |---|---|
-| **Keep** `⌘D` | one focused note field, address above it. The note is the product |
+| **Keep** `⌘⇧D` | one focused note field, address above it. The note is the product |
+| **Bookmark** `⌘D` | Chrome's star and bar: a name, a folder, no note required |
 | **Hold** `⌘⇧R` | a reference pane that belongs to the browser, not to a tab |
 | **Measure** | 360 / 768 / fit, applied to the live page, width stated in mono |
 | **Recall** `⌘K` | tabs, shelf and history together, notes searchable, deduped |
 | **Set aside** | name the desk, close it, restore it with its order intact |
 | **Leave** | the shelf exports as Markdown: title, URL, note |
 
-Keys: `⌘T` `⌘W` `⌘L` `⌘R` `⌘D` `⌘K` `⌘⇧R` `⌘⇧G` `⌘⇧H` `⌘1…9`. Browser keys only.
+Keys: `⌘T` `⌘W` `⌘L` `⌘R` `⌘D` `⌘⇧D` `⌘⇧B` `⌘K` `⌘⇧R` `⌘⇧G` `⌘⇧H` `⌘1…9`. Browser keys only.
 
 The start sheet is not a tab: it sits on the home button beside back, forward and
 reload, so the strip only ever holds pages you went somewhere to reach. There is one

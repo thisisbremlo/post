@@ -47,6 +47,19 @@ export function Toolbar({
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://history" }),
     },
     {
+      id: "bookmarks",
+      label: "bookmarks",
+      icon: "star",
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://bookmarks" }),
+    },
+    {
+      id: "bookmarks-bar",
+      label: state.settings.bookmarksBar ? "hide the bookmarks bar" : "show the bookmarks bar",
+      icon: "bookmark",
+      onSelect: () =>
+        dispatch({ type: "settings", settings: { bookmarksBar: !state.settings.bookmarksBar } }),
+    },
+    {
       id: "sittings",
       label: "sittings",
       icon: "tab",

@@ -33,7 +33,8 @@ export function shelfToMarkdown(pages: KeptPage[]): string {
     lines.push("");
   }
 
-  if (sorted.length === 0) lines.push("Nothing kept yet. Press ⌘D on a page worth remembering.");
+  if (sorted.length === 0)
+    lines.push("Nothing kept yet. Press ⌘⇧D on a page worth remembering.");
   return lines.join("\n");
 }
 

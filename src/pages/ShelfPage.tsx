@@ -86,7 +86,7 @@ export function ShelfPage() {
 
         {state.shelf.length === 0 ? (
           <p className="empty">
-            Nothing kept yet. Press ⌘D on a page worth remembering, and say why in one line.
+            Nothing kept yet. Press ⌘⇧D on a page worth remembering, and say why in one line.
           </p>
         ) : (
           <div className="catalogue">

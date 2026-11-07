@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("scaffold", {
 
   listExtensions: () => ipcRenderer.invoke("scaffold:extensions"),
   addExtension: () => ipcRenderer.invoke("scaffold:extensions-add"),
+  installFromStore: (url) => ipcRenderer.invoke("scaffold:extensions-store", { url }),
   removeExtension: (id) => ipcRenderer.invoke("scaffold:extensions-remove", { id }),
   openDownloads: () => ipcRenderer.send("scaffold:open-downloads"),
 

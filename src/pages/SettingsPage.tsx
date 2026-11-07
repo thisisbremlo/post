@@ -161,6 +161,24 @@ export function SettingsPage() {
               ]}
             />
           </section>
+
+          <section className="setting-row">
+            <div className="setting-copy">
+              <h3 className="setting-name">bookmarks bar</h3>
+              <p className="setting-note">
+                The Chrome-style strip under the address bar. ⌘⇧B toggles it while you browse.
+              </p>
+            </div>
+            <Choice
+              label="bookmarks bar"
+              value={settings.bookmarksBar ? "show" : "hide"}
+              onChange={(value) => set({ bookmarksBar: value === "show" })}
+              options={[
+                ["show", "show"],
+                ["hide", "hide"],
+              ]}
+            />
+          </section>
         </Group>
 
         <Group title="downloads & privacy">

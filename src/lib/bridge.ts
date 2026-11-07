@@ -107,6 +107,7 @@ export interface ScaffoldBridge {
   /** Unpacked Chrome extensions kept in this profile. */
   listExtensions: () => Promise<ExtensionInfo[]>;
   addExtension: () => Promise<ExtensionInfo[]>;
+  installFromStore: (url: string) => Promise<ExtensionInfo[]>;
   removeExtension: (id: string) => Promise<ExtensionInfo[]>;
   openDownloads: () => void;
   navigate: (tabId: string, url: string) => void;

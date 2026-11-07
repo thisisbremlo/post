@@ -29,6 +29,7 @@ import {
   Search,
   SlidersHorizontal,
   Smartphone,
+  Star,
   Tablet,
   Trash2,
   Ungroup,
@@ -74,6 +75,7 @@ export type IconName =
   | "video"
   | "link"
   | "puzzle"
+  | "star"
   | "info";
 
 /** One set, one weight. The names are ours; the drawings are Lucide's. */
@@ -114,6 +116,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   video: Video,
   link: Link,
   puzzle: Puzzle,
+  star: Star,
 };
 
 export function Icon({

@@ -64,6 +64,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
 
   const internal = internalPageOf(tab.url) !== null;
   const kept = state.shelf.some((page) => page.url === tab.url);
+  const bookmarked = state.bookmarks.some((bookmark) => bookmark.url === tab.url);
 
   const commit = () => {
     const next = addressToUrl(value, state.settings.search);
@@ -115,7 +116,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
             type="button"
             className={"omnibox-save" + (kept ? " is-kept" : "")}
             aria-label={kept ? "on the shelf — edit the note" : "keep this page on the shelf"}
-            title={kept ? "on the shelf — edit the note (⌘D)" : "keep this page on the shelf (⌘D)"}
+            title={kept ? "on the shelf — edit the note (⌘⇧D)" : "keep this page on the shelf (⌘⇧D)"}
             onClick={() => window.dispatchEvent(new CustomEvent("scaffold:keep"))}
           >
             <Icon name="bookmark" size={12} />
@@ -131,6 +132,18 @@ export function Omnibox({ tab }: { tab: Tab }) {
         >
           <Icon name={copied ? "check" : "copy"} size={13} />
         </button>
+        {!internal && (
+          <button
+            type="button"
+            className={"omnibox-star" + (bookmarked ? " is-bookmarked" : "")}
+            aria-label={bookmarked ? "edit this bookmark" : "bookmark this page"}
+            aria-pressed={bookmarked}
+            title={bookmarked ? "edit this bookmark (⌘D)" : "bookmark this page (⌘D)"}
+            onClick={() => window.dispatchEvent(new CustomEvent("scaffold:bookmark"))}
+          >
+            <Icon name="star" size={14} />
+          </button>
+        )}
       </div>
     </div>
   );

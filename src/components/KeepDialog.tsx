@@ -5,7 +5,7 @@ import { useStore } from "../state/store";
 import type { Tab } from "../state/types";
 
 /**
- * ⌘D. One line, already focused, address above it. The note is the product:
+ * ⌘⇧D. One line, already focused, address above it. The note is the product:
  * a bookmark without a reason is a dead link with extra steps.
  */
 export function KeepDialog({ tab, onClose }: { tab: Tab; onClose: () => void }) {

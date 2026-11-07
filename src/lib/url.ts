@@ -8,6 +8,7 @@ const INTERNAL_TITLES: Record<InternalPage, string> = {
   turbo: "turbo notes",
   settings: "settings",
   updates: "updates",
+  bookmarks: "bookmarks",
 };
 
 const INTERNAL_PAGES = Object.keys(INTERNAL_TITLES) as InternalPage[];

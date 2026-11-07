@@ -17,7 +17,17 @@ export type InternalPage =
   | "sittings"
   | "turbo"
   | "settings"
-  | "updates";
+  | "updates"
+  | "bookmarks";
+
+export interface Bookmark {
+  id: string;
+  url: string;
+  title: string;
+  /** A folder name, or null for the bookmarks bar itself. */
+  folder: string | null;
+  addedAt: number;
+}
 
 export interface Settings {
   /** What the plus button and ⌘T open. */
@@ -30,6 +40,8 @@ export interface Settings {
   zoom: 90 | 100 | 110 | 125;
   /** Ask pages not to follow you across sites. */
   doNotTrack: boolean;
+  /** The Chrome-style strip under the address bar. */
+  bookmarksBar: boolean;
   /** Full micro-motion, or none of it. */
   animations: "full" | "reduced";
 }
@@ -97,6 +109,8 @@ export interface ScaffoldState {
   sittings: Sitting[];
   /** Turbo notes: one line each, newest first. */
   notes: Note[];
+  /** Chrome-style bookmarks, separate from the shelf's reasoned pages. */
+  bookmarks: Bookmark[];
   /** Browser behaviour, the only things worth a preference. */
   settings: Settings;
   /** The shelf bar is dismissed from the bottom of the desk, not emptied. */

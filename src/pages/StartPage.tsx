@@ -1,5 +1,5 @@
 const KEYS: [string, string][] = [
-  ["keep this page", "⌘D"],
+  ["keep this page", "⌘⇧D"],
   ["catalogue", "⌘K"],
   ["hold as reference", "⌘⇧R"],
   ["address bar", "⌘L"],
@@ -20,7 +20,7 @@ export function StartPage() {
         </h1>
         <p className="start-line">
           Press <kbd className="keycap">⌘L</kbd> for an address, then{" "}
-          <kbd className="keycap">⌘D</kbd> to keep what you find.
+          <kbd className="keycap">⌘⇧D</kbd> to keep what you find.
         </p>
 
         <dl className="keys">
