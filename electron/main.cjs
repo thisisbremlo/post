@@ -4,6 +4,7 @@ const {
   Menu,
   WebContentsView,
   clipboard,
+  dialog,
   ipcMain,
   session,
   shell,
@@ -30,6 +31,8 @@ let referenceUrl = null;
 /** @type {object | null} */
 let lastLayout = null;
 let overlayOpen = false;
+/** Page preferences the chrome keeps in its settings. */
+const pagePrefs = { zoom: 100, doNotTrack: false };
 
 /* -------------------------------------------------------------- page views */
 
@@ -37,8 +40,14 @@ function notify(payload) {
   chromeView?.webContents.send("scaffold:view-event", payload);
 }
 
+function applyPageZoom(contents) {
+  if (!contents || contents.isDestroyed()) return;
+  contents.setZoomFactor(pagePrefs.zoom / 100);
+}
+
 function bindView(view, tabId) {
   const contents = view.webContents;
+  applyPageZoom(contents);
 
   contents.setWindowOpenHandler(({ url }) => {
     // A link that wants a new window becomes a tab instead; nothing escapes.
@@ -447,17 +456,64 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+/* ------------------------------------------------------------- extensions */
+
+function extensionsDir() {
+  return path.join(app.getPath("userData"), "extensions");
+}
+
+function extSession() {
+  return session.fromPartition(PARTITION);
+}
+
+/** What the chrome may know about an extension: enough to list it and open its popup. */
+function extensionList() {
+  return extSession().getAllExtensions().map((ext) => {
+    const action = ext.manifest?.action ?? ext.manifest?.browser_action ?? {};
+    const popup = typeof action.default_popup === "string" ? action.default_popup : "";
+    return {
+      id: ext.id,
+      name: ext.name,
+      version: ext.version,
+      description: typeof ext.manifest?.description === "string" ? ext.manifest.description : "",
+      popup: popup ? `chrome-extension://${ext.id}/${popup.replace(/^\/+/, "")}` : "",
+    };
+  });
+}
+
+/** Unpacked extensions live in the profile, one folder each. */
+async function loadStoredExtensions() {
+  const dir = extensionsDir();
+  fs.mkdirSync(dir, { recursive: true });
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    try {
+      await extSession().loadExtension(path.join(dir, entry.name), { allowFileAccess: true });
+    } catch (error) {
+      console.warn("extension skipped:", entry.name, error.message);
+    }
+  }
+}
+
+app.whenReady().then(async () => {
   // Deny by default: camera, microphone, location, notifications.
   session.fromPartition(PARTITION).setPermissionRequestHandler((_contents, _permission, callback) => {
     callback(false);
   });
   session.fromPartition(PARTITION).setPermissionCheckHandler(() => false);
 
+  // Do Not Track is a header on every page request, not a promise in the UI.
+  session.fromPartition(PARTITION).webRequest.onBeforeSendHeaders((details, callback) => {
+    if (pagePrefs.doNotTrack) details.requestHeaders.DNT = "1";
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
   // A browser saves what you download, to the folder the OS calls Downloads.
   session.fromPartition(PARTITION).on("will-download", (_event, item) => {
     notify({ kind: "download", title: item.getFilename() });
   });
+
+  await loadStoredExtensions();
 
   applyMenu();
   createWindow();
@@ -478,6 +534,63 @@ app.on("window-all-closed", () => {
 /* --------------------------------------------------------------------- ipc */
 
 ipcMain.on("scaffold:check-updates", () => checkForUpdates());
+
+ipcMain.on("scaffold:preferences", (_event, preferences) => {
+  const zoom = Number(preferences?.zoom);
+  pagePrefs.zoom = Number.isFinite(zoom) ? Math.min(200, Math.max(50, zoom)) : 100;
+  pagePrefs.doNotTrack = Boolean(preferences?.doNotTrack);
+  for (const entry of pageViews.values()) applyPageZoom(entry.view.webContents);
+  if (referenceView) applyPageZoom(referenceView.webContents);
+});
+
+ipcMain.on("scaffold:open-downloads", () => {
+  shell.openPath(app.getPath("downloads"));
+});
+
+ipcMain.handle("scaffold:extensions", () => extensionList());
+
+ipcMain.handle("scaffold:extensions-add", async () => {
+  const picked = await dialog.showOpenDialog({
+    title: "add an extension",
+    buttonLabel: "add",
+    message: "Choose an unpacked Chrome extension folder.",
+    properties: ["openDirectory"],
+  });
+  if (picked.canceled || !picked.filePaths[0]) return extensionList();
+
+  const source = picked.filePaths[0];
+  const dir = extensionsDir();
+  fs.mkdirSync(dir, { recursive: true });
+  const base = path.basename(source);
+  let destination = path.join(dir, base);
+  let copy = 2;
+  while (fs.existsSync(destination)) destination = path.join(dir, `${base}-${copy++}`);
+
+  await fs.promises.cp(source, destination, { recursive: true });
+  try {
+    await extSession().loadExtension(destination, { allowFileAccess: true });
+  } catch (error) {
+    fs.rmSync(destination, { recursive: true, force: true });
+    throw new Error(error.message ?? "that folder is not an unpacked extension");
+  }
+  return extensionList();
+});
+
+ipcMain.handle("scaffold:extensions-remove", (_event, payload) => {
+  const id = typeof payload?.id === "string" ? payload.id : "";
+  const ext = extSession().getAllExtensions().find((item) => item.id === id);
+  if (!ext) return extensionList();
+  try {
+    extSession().removeExtension(id);
+  } catch (error) {
+    console.warn("extension could not be removed:", error.message);
+  }
+  const root = extensionsDir();
+  if (ext.path.startsWith(root + path.sep)) {
+    fs.rmSync(ext.path, { recursive: true, force: true });
+  }
+  return extensionList();
+});
 
 ipcMain.on("scaffold:sync-layout", (_event, layout) => applyLayout(layout));
 

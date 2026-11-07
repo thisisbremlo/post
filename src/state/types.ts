@@ -24,6 +24,12 @@ export interface Settings {
   newTab: "google" | "start";
   /** Where a search goes. */
   search: "duckduckgo" | "google";
+  /** Continue the last desk, or open one clean sheet. */
+  startup: "restore" | "fresh";
+  /** Every page opens at this size; single pages still zoom while read. */
+  zoom: 90 | 100 | 110 | 125;
+  /** Ask pages not to follow you across sites. */
+  doNotTrack: boolean;
   /** Full micro-motion, or none of it. */
   animations: "full" | "reduced";
 }

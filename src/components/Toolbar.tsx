@@ -11,11 +11,17 @@ import { WidthPills } from "./WidthPills";
 export function Toolbar({
   onOpenPalette,
   onOpenTurbo,
+  onOpenExtensions,
+  onMenuChange,
+  extensionCount,
   update,
   onOpenUpdate,
 }: {
   onOpenPalette: () => void;
   onOpenTurbo: (box: DOMRect) => void;
+  onOpenExtensions: (box: DOMRect) => void;
+  onMenuChange: (open: boolean) => void;
+  extensionCount: number;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
 }) {
@@ -139,6 +145,21 @@ export function Toolbar({
 
       <button
         type="button"
+        className="icon-btn extensions-button"
+        aria-label="extensions"
+        title={extensionCount > 0 ? `${extensionCount} extensions` : "extensions"}
+        onClick={(event) => onOpenExtensions(event.currentTarget.getBoundingClientRect())}
+      >
+        <Icon name="puzzle" size={16} />
+        {extensionCount > 0 && (
+          <span className="extensions-chevron" aria-hidden="true">
+            <Icon name="chevron-down" size={8} />
+          </span>
+        )}
+      </button>
+
+      <button
+        type="button"
         className={"shelf-chip" + (state.shelf.length > 0 ? " has-cards" : "")}
         aria-label="shelf"
         title="the shelf — right click for its menu"
@@ -188,16 +209,28 @@ export function Toolbar({
         onClick={(event) => {
           if (menu) {
             setMenu(null);
+            onMenuChange(false);
             return;
           }
           const box = event.currentTarget.getBoundingClientRect();
           setMenu({ x: box.right - 264, y: box.bottom + 6 });
+          onMenuChange(true);
         }}
       >
         <Icon name="more" size={16} />
       </button>
 
-      {menu && <ContextMenu x={menu.x} y={menu.y} items={tools} onClose={() => setMenu(null)} />}
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={tools}
+          onClose={() => {
+            setMenu(null);
+            onMenuChange(false);
+          }}
+        />
+      )}
 
     </header>
   );

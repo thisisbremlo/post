@@ -55,29 +55,40 @@ export function UpdatesPage() {
             <p className="updates-kicker">release notes</p>
             <h1 className="updates-title">What changed in Post.</h1>
             <p className="updates-lede">
-              The newest additions, newest first. Installing reopens the app where you left off;
-              your tabs, shelf and settings stay where they are.
+              {update
+                ? "The newest additions, newest first. Installing reopens the app where you left off; your tabs, shelf and settings stay where they are."
+                : "Nothing is waiting. This copy is level with the newest build, so there is nothing to install."}
             </p>
 
-            <div className="updates-actions">
-              {bridge ? (
-                <button
-                  type="button"
-                  className="updates-primary"
-                  disabled={busy || stage === "ready"}
-                  onClick={() => void install()}
-                >
-                  {busy ? "installing…" : stage === "failed" ? "try again" : "install and relaunch"}
-                </button>
-              ) : (
-                <span className="updates-quiet">This preview cannot update itself.</span>
-              )}
-            </div>
+            {update && (
+              <div className="updates-actions">
+                {bridge ? (
+                  <button
+                    type="button"
+                    className="updates-primary"
+                    disabled={busy || stage === "ready"}
+                    onClick={() => void install()}
+                  >
+                    {busy
+                      ? "installing…"
+                      : stage === "failed"
+                        ? "try again"
+                        : "install and relaunch"}
+                  </button>
+                ) : (
+                  <span className="updates-quiet">This preview cannot update itself.</span>
+                )}
+              </div>
+            )}
 
-            {busy && <p className="updates-status">Post reopens when it is done.</p>}
-            {stage === "ready" && <p className="updates-status">Reopening on the new build.</p>}
+            {update && busy && (
+              <p className="updates-status">Post reopens when it is done.</p>
+            )}
+            {update && stage === "ready" && (
+              <p className="updates-status">Reopening on the new build.</p>
+            )}
 
-            {stage === "failed" && (
+            {update && stage === "failed" && (
               <p className="updates-fail">
                 It stopped before it finished.
                 <button
@@ -113,13 +124,15 @@ export function UpdatesPage() {
           </section>
         </div>
 
-        <section className="updates-section">
-          <h2 className="updates-heading">Installing</h2>
-          <p className="updates-body">
-            Post updates itself from the copy it was built from, then reopens. Nothing is sent
-            anywhere, and no account is involved.
-          </p>
-        </section>
+        {update && (
+          <section className="updates-section">
+            <h2 className="updates-heading">Installing</h2>
+            <p className="updates-body">
+              Post updates itself from the copy it was built from, then reopens. Nothing is sent
+              anywhere, and no account is involved.
+            </p>
+          </section>
+        )}
 
         <footer className="updates-foot">
           <span className="tnum">v{APP_VERSION}</span>

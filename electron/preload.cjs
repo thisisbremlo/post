@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld("scaffold", {
 
   syncLayout: (layout) => ipcRenderer.send("scaffold:sync-layout", layout),
   setOverlay: (open) => ipcRenderer.send("scaffold:overlay", Boolean(open)),
+  setPreferences: (preferences) => ipcRenderer.send("scaffold:preferences", preferences),
+
+  listExtensions: () => ipcRenderer.invoke("scaffold:extensions"),
+  addExtension: () => ipcRenderer.invoke("scaffold:extensions-add"),
+  removeExtension: (id) => ipcRenderer.invoke("scaffold:extensions-remove", { id }),
+  openDownloads: () => ipcRenderer.send("scaffold:open-downloads"),
 
   navigate: (tabId, url) => ipcRenderer.send("scaffold:navigate", { tabId, url }),
   /** What the page declares about itself: description, social card, JSON-LD. */

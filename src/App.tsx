@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ContextMenu } from "./components/ContextMenu";
 import type { MenuItem } from "./components/ContextMenu";
+import { ExtensionsMenu } from "./components/ExtensionsMenu";
 import { KeepDialog } from "./components/KeepDialog";
 import { MetaSheet } from "./components/MetaSheet";
 import { Palette } from "./components/Palette";
@@ -12,7 +13,13 @@ import { TabStrip } from "./components/TabStrip";
 import { Toolbar } from "./components/Toolbar";
 import { TurboNote } from "./components/TurboNote";
 import { UpdateDialog } from "./components/UpdateDialog";
-import { bridge, type BrowserCommand, type PageMeta, type ViewRect } from "./lib/bridge";
+import {
+  bridge,
+  type BrowserCommand,
+  type ExtensionInfo,
+  type PageMeta,
+  type ViewRect,
+} from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
 import { fileStamp } from "./lib/time";
 import { checkForUpdate, updateFromCommit, type UpdateInfo } from "./lib/updates";
@@ -76,6 +83,9 @@ export function App() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
+  const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
+  const [extMenu, setExtMenu] = useState<{ x: number; y: number } | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
 
   const stageRef = useRef<HTMLElement>(null);
@@ -143,6 +153,28 @@ export function App() {
     };
   }, []);
 
+  // Extensions live in the shell's profile; the chrome only lists them.
+  useEffect(() => {
+    if (!bridge) return;
+    const read = () => {
+      bridge!
+        .listExtensions()
+        .then(setExtensions)
+        .catch(() => setExtensions([]));
+    };
+    read();
+    window.addEventListener("scaffold:extensions-changed", read);
+    return () => window.removeEventListener("scaffold:extensions-changed", read);
+  }, []);
+
+  // Zoom and Do Not Track are page-level, so the shell applies them to every view.
+  useEffect(() => {
+    bridge?.setPreferences({
+      zoom: state.settings.zoom,
+      doNotTrack: state.settings.doNotTrack,
+    });
+  }, [state.settings.zoom, state.settings.doNotTrack]);
+
   // A browser looks for a newer build quietly and says so once, in a small chip.
   useEffect(() => {
     if (bridge) return;
@@ -173,6 +205,7 @@ export function App() {
         setKeepOpen(false);
         setMenu(null);
         setUpdateOpen(false);
+        setExtMenu(null);
         setMetaSheet(null);
         return;
       }
@@ -729,8 +762,19 @@ export function App() {
 
   // Native views sit above the chrome, so a modal must lift them out of the way.
   useEffect(() => {
-    bridge?.setOverlay(keepOpen || paletteOpen || updateOpen || metaSheet !== null);
-  }, [keepOpen, paletteOpen, updateOpen, metaSheet]);
+    // A native page paints above the chrome, so every surface that floats over
+    // it — dialogs, menus, turbo notes — has to lift the views out of the way.
+    bridge?.setOverlay(
+      keepOpen ||
+        paletteOpen ||
+        updateOpen ||
+        metaSheet !== null ||
+        menu !== null ||
+        turbo !== null ||
+        extMenu !== null ||
+        toolsOpen,
+    );
+  }, [keepOpen, paletteOpen, updateOpen, metaSheet, menu, turbo, extMenu, toolsOpen]);
 
   useEffect(() => {
     if (!bridge) return;
@@ -789,6 +833,14 @@ export function App() {
             y: box.bottom + 8,
           })
         }
+        extensionCount={extensions.length}
+        onMenuChange={setToolsOpen}
+        onOpenExtensions={(box) =>
+          setExtMenu({
+            x: Math.min(Math.max(12, box.right - 300), window.innerWidth - 312),
+            y: box.bottom + 6,
+          })
+        }
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
       />
@@ -839,6 +891,18 @@ export function App() {
       )}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
       {turbo && <TurboNote x={turbo.x} y={turbo.y} onClose={() => setTurbo(null)} />}
+      {extMenu && (
+        <ExtensionsMenu
+          x={extMenu.x}
+          y={extMenu.y}
+          onClose={() => setExtMenu(null)}
+          onChange={setExtensions}
+          onOpen={(url) => {
+            setExtMenu(null);
+            dispatch({ type: "open-tab", url });
+          }}
+        />
+      )}
       {metaSheet && (
         <MetaSheet
           tab={metaSheet.tab}

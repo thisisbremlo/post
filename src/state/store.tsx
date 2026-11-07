@@ -16,7 +16,14 @@ import type {
 
 const STORAGE_KEY = "scaffold.state.v1";
 const HISTORY_LIMIT = 400;
-const DEFAULT_SETTINGS: Settings = { newTab: "google", search: "duckduckgo", animations: "full" };
+const DEFAULT_SETTINGS: Settings = {
+  newTab: "google",
+  search: "duckduckgo",
+  startup: "restore",
+  zoom: 100,
+  doNotTrack: false,
+  animations: "full",
+};
 /** Blue leads because it is the brand's; red stays readable for groups already filed. */
 const GROUP_COLORS: GroupColor[] = ["blue", "green", "amber", "violet"];
 
@@ -558,16 +565,27 @@ function restore(): ScaffoldState {
         collapsed: Boolean(group.collapsed),
       }));
     const knownGroup = new Set(rawGroups.map((group) => group.id));
-    const tabs = Array.isArray(parsed.tabs) && parsed.tabs.length > 0
+    const stored = (parsed.settings ?? {}) as Partial<Settings>;
+    const settings: Settings = {
+      newTab: stored.newTab === "start" ? "start" : "google",
+      search: stored.search === "google" ? "google" : "duckduckgo",
+      startup: stored.startup === "fresh" ? "fresh" : "restore",
+      zoom: stored.zoom === 90 || stored.zoom === 110 || stored.zoom === 125 ? stored.zoom : 100,
+      doNotTrack: stored.doNotTrack === true,
+      animations: stored.animations === "reduced" ? "reduced" : "full",
+    };
+    const restored = Array.isArray(parsed.tabs) && parsed.tabs.length > 0
       ? parsed.tabs.map((tab) => ({
           ...tab,
           loading: false,
           groupId: tab.groupId && knownGroup.has(tab.groupId) ? tab.groupId : null,
         }))
       : fallback.tabs;
+    // A clean sheet is one start page, not the last sitting; settings, shelf and
+    // history still come back, because those are not the desk.
+    const tabs = settings.startup === "fresh" ? [createTab("scaffold://start")] : restored;
     const groups = rawGroups.filter((group) => tabs.some((tab) => tab.groupId === group.id));
     const activeId = tabs.some((tab) => tab.id === parsed.activeId) ? parsed.activeId! : tabs[0].id;
-    const stored = (parsed.settings ?? {}) as Partial<Settings>;
     return {
       ...fallback,
       ...parsed,
@@ -578,11 +596,7 @@ function restore(): ScaffoldState {
       history: Array.isArray(parsed.history) ? parsed.history : [],
       sittings: Array.isArray(parsed.sittings) ? parsed.sittings : [],
       notes: Array.isArray(parsed.notes) ? parsed.notes : [],
-      settings: {
-        newTab: stored.newTab === "start" ? "start" : "google",
-        search: stored.search === "google" ? "google" : "duckduckgo",
-        animations: stored.animations === "reduced" ? "reduced" : "full",
-      },
+      settings,
       shelfBarOpen: parsed.shelfBarOpen !== false,
       notice: null,
     };

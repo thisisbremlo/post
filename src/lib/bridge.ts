@@ -70,6 +70,20 @@ export interface UpdateNotice {
   entries?: ChangelogEntry[];
 }
 
+export interface ExtensionInfo {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  /** A chrome-extension:// page for its toolbar popup; empty when it has none. */
+  popup: string;
+}
+
+export interface PagePreferences {
+  zoom: number;
+  doNotTrack: boolean;
+}
+
 export interface InstallEvent {
   state: "downloading" | "verifying" | "pulling" | "installing" | "building" | "ready" | "failed";
   /** The last useful line of output, or why it stopped. */
@@ -88,6 +102,13 @@ export interface ScaffoldBridge {
   syncLayout: (layout: LayoutSync) => void;
   /** Modal overlays must lift the native page views or they cover them. */
   setOverlay: (open: boolean) => void;
+  /** Applies default zoom and Do Not Track to every page view, now and later. */
+  setPreferences: (preferences: PagePreferences) => void;
+  /** Unpacked Chrome extensions kept in this profile. */
+  listExtensions: () => Promise<ExtensionInfo[]>;
+  addExtension: () => Promise<ExtensionInfo[]>;
+  removeExtension: (id: string) => Promise<ExtensionInfo[]>;
+  openDownloads: () => void;
   navigate: (tabId: string, url: string) => void;
   /** Reads the page's own account of itself; null on Post's pages and on failure. */
   readPageMeta: (tabId: string) => Promise<PageMeta | null>;
