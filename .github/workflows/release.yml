@@ -1,0 +1,113 @@
+name: release
+
+# Every push to main is a release, because every commit is an update: the app
+# reads the tip of main and installs the newest signed build. Pushing a bad
+# commit therefore ships it — use the Actions tab to cancel if needed.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      # Build numbers, not semver: 0.3.0 is the product, 0.3.<run> is the build.
+      - name: version
+        run: |
+          VERSION="0.3.${{ github.run_number }}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "releasing $VERSION"
+
+      - name: signing secrets
+        env:
+          CERT: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          CERT_PASS: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASS: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in CERT CERT_PASS APPLE_ID APPLE_PASS TEAM; do
+            if [ -z "${!name}" ]; then
+              echo "::error::missing secret $name. Add the five secrets described in README.md (Signing)."
+              exit 1
+            fi
+          done
+
+      # electron-builder imports the certificate from CSC_LINK and signs every binary,
+      # including the helper apps, so notarisation has nothing to reject.
+      - name: build
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        run: npm run package:mac
+
+      - name: notarise and staple
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+
+          notarise() {
+            xcrun notarytool submit "$1" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+          }
+
+          for app in release/mac-arm64/Post.app release/mac/Post.app; do
+            [ -d "$app" ] || continue
+            case "$app" in
+              *mac-arm64*) arch=arm64 ;;
+              *) arch=x64 ;;
+            esac
+            echo "--- $arch"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            ditto -c -k --sequesterRsrc --keepParent "$app" "out/Post-$arch.zip"
+            notarise "out/Post-$arch.zip"
+            xcrun stapler staple "$app"
+            spctl -a -t exec -vv "$app"
+            # The ticket lives in the bundle, so the updater's zip is made again after stapling.
+            ditto -c -k --sequesterRsrc --keepParent "$app" "out/Post-$arch.zip"
+          done
+
+          for dmg in release/*.dmg; do
+            [ -f "$dmg" ] || continue
+            notarise "$dmg"
+            xcrun stapler staple "$dmg"
+            cp "$dmg" out/
+          done
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" out/* --clobber
+          else
+            gh release create "v$VERSION" out/* \
+              --title "Post $VERSION" \
+              --notes "Signed and notarised build of ${{ github.sha }}. Post installs this from its update dialog; the zip names are stable so \`releases/latest/download/Post-arm64.zip\` always answers."
+          fi

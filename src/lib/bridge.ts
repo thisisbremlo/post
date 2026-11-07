@@ -49,7 +49,7 @@ export interface UpdateNotice {
 }
 
 export interface InstallEvent {
-  state: "pulling" | "installing" | "building" | "ready" | "failed";
+  state: "downloading" | "verifying" | "pulling" | "installing" | "building" | "ready" | "failed";
   /** The last useful line of output, or why it stopped. */
   line: string;
 }

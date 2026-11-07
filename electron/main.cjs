@@ -524,36 +524,18 @@ function runStep(command) {
   });
 }
 
-async function installUpdate() {
-  const bundle = installedBundle();
-  const checkoutExists = checkoutPath && fs.existsSync(path.join(checkoutPath, "package.json"));
-  if (!bundle || !checkoutExists) return "manual";
+const releaseAsset = () =>
+  `https://github.com/thisisbremlo/post/releases/latest/download/Post-${process.arch === "arm64" ? "arm64" : "x64"}.zip`;
 
-  const steps = [
-    ["pulling", "git pull --ff-only"],
-    ["installing", "npm install"],
-    ["building", "npm run package:mac"],
-  ];
+const runQuiet = (command, args) =>
+  new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: "ignore" });
+    child.on("close", (code) => resolve(code));
+    child.on("error", () => resolve(-1));
+  });
 
-  for (const [state, command] of steps) {
-    tellInstall(state, command);
-    const result = await runStep(command);
-    if (result.code !== 0) {
-      tellInstall("failed", result.tail || `${command} stopped with ${result.code}`);
-      return "started";
-    }
-  }
-
-  const built = ["release/mac-arm64/Post.app", "release/mac/Post.app", "release/mac-universal/Post.app"]
-    .map((candidate) => path.join(checkoutPath, candidate))
-    .find((candidate) => fs.existsSync(candidate));
-
-  if (!built) {
-    tellInstall("failed", "electron-builder left no Post.app to swap in");
-    return "started";
-  }
-
-  // The swap waits for this process to exit; the app quits, the copy is replaced.
+/** Wait for this process to die, swap the bundle in its place, reopen it. */
+function swapIn(bundle, built, cleanup) {
   const swapper = path.join(app.getPath("temp"), `post-swap-${Date.now()}.sh`);
   fs.writeFileSync(
     swapper,
@@ -564,6 +546,7 @@ async function installUpdate() {
       `ditto "${built}" "${bundle}.incoming"`,
       `rm -rf "${bundle}"`,
       `mv "${bundle}.incoming" "${bundle}"`,
+      cleanup ? `rm -rf "${cleanup}"` : ":",
       `open "${bundle}"`,
       `rm -f "${swapper}"`,
       "",
@@ -571,9 +554,85 @@ async function installUpdate() {
     { mode: 0o700 },
   );
   spawn("/bin/zsh", [swapper], { detached: true, stdio: "ignore" }).unref();
-
   tellInstall("ready", "reopening on the new build");
   setTimeout(() => app.exit(0), 900);
+}
+
+/**
+ * The distributed route: a signed, notarised zip from the latest GitHub release.
+ * No checkout, no node, no npm — a downloaded .app already knows how to replace
+ * itself. The signature is checked before anything is unpacked into place.
+ */
+async function fromRelease() {
+  tellInstall("downloading", "fetching the signed release");
+  const response = await fetch(releaseAsset(), { redirect: "follow" });
+  if (!response.ok) throw new Error(`the release asked back ${response.status}`);
+
+  const stamp = Date.now();
+  const zip = path.join(app.getPath("temp"), `post-${stamp}.zip`);
+  fs.writeFileSync(zip, Buffer.from(await response.arrayBuffer()));
+
+  const dir = path.join(app.getPath("temp"), `post-${stamp}`);
+  tellInstall("verifying", "checking the signature");
+  if ((await runQuiet("/usr/bin/ditto", ["-x", "-k", zip, dir])) !== 0) {
+    throw new Error("the release did not unzip");
+  }
+
+  const built = fs
+    .readdirSync(dir)
+    .map((name) => path.join(dir, name))
+    .find((candidate) => candidate.endsWith(".app"));
+  if (!built) throw new Error("the release held no app");
+  if ((await runQuiet("/usr/bin/codesign", ["--verify", "--deep", "--strict", built])) !== 0) {
+    throw new Error("the release is not signed");
+  }
+
+  fs.rmSync(zip, { force: true });
+  return { built, cleanup: dir };
+}
+
+/** The development route: pull, install, rebuild from the baked checkout. */
+async function fromCheckout() {
+  if (!checkoutPath || !fs.existsSync(path.join(checkoutPath, "package.json"))) return null;
+
+  const steps = [
+    ["pulling", "git pull --ff-only"],
+    ["installing", "npm install"],
+    ["building", "npm run package:mac"],
+  ];
+
+  for (const [state, command] of steps) {
+    tellInstall(state, command);
+    const result = await runStep(command);
+    if (result.code !== 0) return null;
+  }
+
+  const built = ["release/mac-arm64/Post.app", "release/mac/Post.app", "release/mac-universal/Post.app"]
+    .map((candidate) => path.join(checkoutPath, candidate))
+    .find((candidate) => fs.existsSync(candidate));
+
+  return built ?? null;
+}
+
+async function installUpdate() {
+  const bundle = installedBundle();
+  if (!bundle) return "manual";
+
+  try {
+    const release = await fromRelease();
+    swapIn(bundle, release.built, release.cleanup);
+    return "started";
+  } catch (error) {
+    tellInstall("failed", error.message);
+  }
+
+  const built = await fromCheckout();
+  if (built) {
+    swapIn(bundle, built, "");
+    return "started";
+  }
+
+  tellInstall("failed", "no release to download and no checkout to build from");
   return "started";
 }
 

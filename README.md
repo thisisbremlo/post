@@ -88,12 +88,37 @@ therefore visible, whether or not the version moved. `npm run stamp` refreshes
 `update.json`; `SCAFFOLD_VERSION=0.2.0 npm run dev` pretends to be an older build when
 you want to see the chip.
 When main has moved past the running build, the dialog opens once per commit and a
-small `update` chip stays in the toolbar for reopening it. In the packaged app the
-button pulls, installs, rebuilds, swaps the `.app` and reopens on the new copy;
-packaging bakes the checkout path into `electron/checkout.json` (not in git) so the
-app knows where to build from, and reports each step in the dialog. In the harness,
-or in a build that was never packaged, the dialog keeps the pull command instead.
+small `update` chip stays in the toolbar for reopening it. In a packaged app the
+button downloads the signed, notarised zip from the latest GitHub release, verifies
+its signature with `codesign`, swaps the `.app` and reopens — no checkout, no node,
+no npm. A build with a baked checkout (`electron/checkout.json`) but no reachable
+release falls back to pulling and rebuilding; the harness keeps the pull command.
 Nothing installs behind your back, and nothing of yours moves.
+
+## Signing and releases
+
+`.github/workflows/release.yml` builds, signs, notarises and publishes on every push
+to main. The version is `0.3.<run number>`, so builds only move forward; the tag is
+`v<version>`, and the assets keep stable names — `Post-arm64.zip`, `Post-x64.zip` and
+the dmg — because `releases/latest/download/Post-arm64.zip` is what the updater asks
+for. Each run verifies the signature with `codesign --verify --deep --strict`, checks
+Gatekeeper with `spctl`, and staples the notarisation ticket before re-zipping, so the
+copy the app downloads is the copy Apple already approved.
+
+The workflow needs five repository secrets (Settings → Secrets and variables →
+Actions). Without them it fails at the `signing secrets` step rather than publishing
+an unsigned build:
+
+| secret | what it is |
+| --- | --- |
+| `MAC_CERTIFICATE_P12` | base64 of a Developer ID Application certificate and key (`.p12`) |
+| `MAC_CERTIFICATE_PASSWORD` | the password you set when exporting that `.p12` |
+| `APPLE_ID` | the Apple ID on the developer account |
+| `APPLE_APP_SPECIFIC_PASSWORD` | an app-specific password for `notarytool` |
+| `APPLE_TEAM_ID` | the ten-character team identifier |
+
+Signing needs a paid Apple Developer account. Export the certificate from Keychain
+Access as a `.p12`, then `base64 -i cert.p12 | pbcopy` and paste it into the secret.
 
 Tab groups: drag one tab onto another and both land in a tinted group named after the
 target's domain. Click the group's chip to fold it away, double-click to rename it, the
@@ -128,9 +153,8 @@ is the next move, and it is weeks-per-release work, not a weekend.
 
 ## Not built yet
 
-- Tab drag-reorder, find-in-page, code signing and notarisation. The app is unsigned,
-  so a downloaded copy needs Gatekeeper's approval, and self-install builds from the
-  local checkout rather than a signed release feed.
+- Tab drag-reorder, find-in-page, and Windows/Linux updates: the release workflow
+  covers macOS only, and the unpacked Windows and Linux targets have no updater.
 - The passwords page hands off to Chrome's own manager on macOS; the shell handler is
   checked for syntax and reviewed, but this environment has no display, so the handoff
   itself is unverified here.

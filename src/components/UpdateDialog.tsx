@@ -77,7 +77,7 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
             <>This build is older than the published Post {update.version} on main.</>
           )}{" "}
           {bridge
-            ? "Install it and Post pulls, rebuilds, replaces this copy and reopens. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."
+            ? "Install it and Post downloads the signed release, checks the signature, replaces this copy and reopens. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."
             : "Pull it, then relaunch. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."}
         </p>
 
