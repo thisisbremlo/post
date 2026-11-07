@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Icon } from "./Icon";
 import { useStore } from "../state/store";
@@ -44,7 +45,8 @@ export function TurboNote({ x, y, onClose }: { x: number; y: number; onClose: ()
     onClose();
   };
 
-  return (
+  // Outside the app's stacking context, like the menus, so nothing covers it.
+  return createPortal(
     <div className="turbo" role="dialog" aria-label="turbo note" style={{ left: x, top: y }} ref={panel}>
       <div className="turbo-row">
         <span className="turbo-mark" aria-hidden="true">
@@ -80,6 +82,7 @@ export function TurboNote({ x, y, onClose }: { x: number; y: number; onClose: ()
           <Icon name="arrow-up-right" size={11} />
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
