@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { addressToUrl } from "../lib/url";
+import { addressToUrl, internalPageOf } from "../lib/url";
 import { useStore } from "../state/store";
 import type { Tab } from "../state/types";
 import { Icon } from "./Icon";
@@ -62,6 +62,9 @@ export function Omnibox({ tab }: { tab: Tab }) {
     return () => window.removeEventListener("scaffold:address", focus);
   }, []);
 
+  const internal = internalPageOf(tab.url) !== null;
+  const kept = state.shelf.some((page) => page.url === tab.url);
+
   const commit = () => {
     const next = addressToUrl(value, state.settings.search);
     if (next !== tab.url) dispatch({ type: "navigate", tabId: tab.id, url: next });
@@ -102,28 +105,33 @@ export function Omnibox({ tab }: { tab: Tab }) {
           }
         }}
       />
-      <button
-        type="button"
-        className={"omnibox-copy" + (copied ? " is-copied" : "")}
-        aria-label={copied ? "address copied" : "copy address"}
-        title={copied ? "copied" : "copy address"}
-        onClick={copyAddress}
-      >
-        <Icon name={copied ? "check" : "copy"} size={13} />
-      </button>
-      {/* The shelf, one click from the address: the icon saves, the tag says how. */}
-      <button
-        type="button"
-        className="omnibox-save"
-        aria-label="keep this page on the shelf"
-        title="keep this page on the shelf (⌘D)"
-        onClick={() => window.dispatchEvent(new CustomEvent("scaffold:keep"))}
-      >
-        <Icon name="bookmark" size={13} />
-        <span className="omnibox-save-key tnum" aria-hidden="true">
-          ⌘D
-        </span>
-      </button>
+      {/*
+       * The shelf sits in the address, but it says what it does: a word, not a
+       * keycap. Kept pages say so, and open the note again instead of re-saving.
+       */}
+      <div className="omnibox-actions">
+        {!internal && (
+          <button
+            type="button"
+            className={"omnibox-save" + (kept ? " is-kept" : "")}
+            aria-label={kept ? "on the shelf — edit the note" : "keep this page on the shelf"}
+            title={kept ? "on the shelf — edit the note (⌘D)" : "keep this page on the shelf (⌘D)"}
+            onClick={() => window.dispatchEvent(new CustomEvent("scaffold:keep"))}
+          >
+            <Icon name="bookmark" size={12} />
+            <span className="omnibox-save-word">{kept ? "kept" : "keep"}</span>
+          </button>
+        )}
+        <button
+          type="button"
+          className={"omnibox-copy" + (copied ? " is-copied" : "")}
+          aria-label={copied ? "address copied" : "copy address"}
+          title={copied ? "copied" : "copy address"}
+          onClick={copyAddress}
+        >
+          <Icon name={copied ? "check" : "copy"} size={13} />
+        </button>
+      </div>
     </div>
   );
 }
