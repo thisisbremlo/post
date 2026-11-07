@@ -4,12 +4,10 @@ import { bridge } from "../lib/bridge";
 import {
   APP_COMMIT,
   APP_VERSION,
-  changelogPlate,
   checkForUpdate,
   latestUpdate,
   type UpdateInfo,
 } from "../lib/updates";
-import { usePlateWidth } from "../lib/usePlateWidth";
 import { Icon } from "../components/Icon";
 
 const PULL = "git pull && npm install";
@@ -19,7 +17,6 @@ export function UpdatesPage() {
   const [update, setUpdate] = useState<UpdateInfo | null>(latestUpdate());
   const [line, setLine] = useState("");
   const [busy, setBusy] = useState(false);
-  const columns = usePlateWidth(60, 40);
 
   // The harness has no shell to push a notice, so the page asks for itself.
   useEffect(() => {
@@ -78,9 +75,10 @@ export function UpdatesPage() {
 
         {update ? (
           <>
-            <pre className="release-plate release-plate--page">
-              {changelogPlate(update, columns)}
-            </pre>
+            <p className="updates-lede">
+              main is at {update.commit || "a commit this copy cannot name"}. Here is what landed
+              since {update.from || "this build"}.
+            </p>
 
             <div className="updates-actions">
               <button type="button" className="release-primary" disabled={busy} onClick={() => void install()}>

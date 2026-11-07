@@ -2344,12 +2344,6 @@ svg {
   white-space: pre;
 }
 
-.release-plate--page {
-  margin: 14px 0 0;
-  background: var(--sheet);
-  font-size: 12px;
-}
-
 .release-line {
   max-width: 54ch;
   margin: 16px 0 0;
@@ -2437,6 +2431,14 @@ svg {
 }
 
 /* ---------- updates page ---------- */
+
+.updates-lede {
+  max-width: 60ch;
+  margin: 18px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
 
 .updates-actions {
   display: flex;
