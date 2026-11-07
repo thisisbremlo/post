@@ -40,6 +40,25 @@ over `BookmarkModel`, `HistoryService` and `ExtensionRegistry` — no new UI.
 
 ## Build it
 
+On the Mac, with Xcode and depot_tools installed:
+
+```bash
+git pull
+npm install
+npm run fork:build
+```
+
+`fork:build` runs `scripts/fork-macos.sh`: Xcode, depot_tools and free disk are checked,
+Chromium is fetched into `~/chromium/src` if it is not there, the checkout is synced, the
+desk is built into the overlay, the overlay is applied, `gn gen` and `autoninja` run, and
+the built app opens at `chrome://post`. First run: tens of gigabytes and several hours;
+later runs are incremental.
+
+The C++ has never been compiled, so expect the first `autoninja` to stop with API or GN
+errors. Send the first failure, not the last one.
+
+The same steps by hand:
+
 ```bash
 # once, in the repo
 npm run fork:assets              # builds the desk into the overlay and writes the .grd

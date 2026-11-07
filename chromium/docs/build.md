@@ -39,6 +39,11 @@ store, so the store stays.
 
 ## 2. Post's overlay
 
+The whole sequence is one command: `npm run fork:build` (`scripts/fork-macos.sh`). It
+fetches Chromium if needed, syncs, builds the desk, applies the overlay, builds the app
+and opens `chrome://post`. The steps below are what it runs, for when something has to
+be done by hand.
+
 The fork lives in [`chromium/fork`](../fork/README.md). It is an overlay plus two
 anchor-based edits, not a pile of diffs:
 

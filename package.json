@@ -15,6 +15,7 @@
     "shell:dev": "vite --config chromium/shell/vite.config.ts",
     "shell:typecheck": "tsc -p chromium/shell/tsconfig.json",
     "fork:assets": "node scripts/build-fork-assets.mjs",
+    "fork:build": "bash scripts/fork-macos.sh",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
