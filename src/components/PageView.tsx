@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { animate } from "motion";
 
 import { displayAddress, internalPageOf, isWebUrl } from "../lib/url";
 import { bridge } from "../lib/bridge";
-import type { Tab } from "../state/types";
+import type { Tab, WidthRule } from "../state/types";
 import { Icon } from "./Icon";
 import { PageByUrl } from "../pages";
 
@@ -15,13 +16,48 @@ function LoadLine({ active }: { active: boolean }) {
 export function PageView({ tab }: { tab: Tab }) {
   const internal = internalPageOf(tab.url);
   const constrained = tab.width !== "fit";
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const ruleRef = useRef<WidthRule | null>(null);
+  const [available, setAvailable] = useState(0);
+
+  // The stage is the sheet's parent, and the sheet fills it at "fit".
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    const stage = sheet?.parentElement;
+    if (!sheet || !stage) return;
+    const measure = () => setAvailable(stage.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  /*
+   * A width rule moves like a window edge, not like a toggle: 360, 768 and fit
+   * are a resized viewport, so the sheet is animated to the target width and the
+   * native view follows through the layout sync. A window resize follows the
+   * window instead, with no easing to lag behind.
+   */
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet || !available) return;
+    const target = tab.width === "fit" ? available : Math.min(tab.width, available);
+    const changed = ruleRef.current !== tab.width;
+    ruleRef.current = tab.width;
+
+    if (!changed) {
+      animate(sheet, { maxWidth: `${target}px` }, { duration: 0 });
+      return;
+    }
+    animate(
+      sheet,
+      { maxWidth: [`${sheet.getBoundingClientRect().width}px`, `${target}px`] },
+      { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+    );
+  }, [tab.width, available]);
 
   return (
-    <div
-      className={"sheet" + (constrained ? " is-narrow" : "")}
-      data-sheet="active"
-      style={constrained ? { maxWidth: `${tab.width}px` } : undefined}
-    >
+    <div className={"sheet" + (constrained ? " is-narrow" : "")} ref={sheetRef} data-sheet="active">
       {/* No engine in the harness means nothing is in flight to draw. */}
       <LoadLine active={tab.loading && !internal && bridge !== null} />
       {internal ? (

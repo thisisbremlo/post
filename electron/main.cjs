@@ -17,6 +17,9 @@ const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
 const PARTITION = "persist:scaffold";
 
+/** Internal pages are drawn by the chrome; a native view would paint over them. */
+const isInternalUrl = (url) => typeof url === "string" && url.startsWith("scaffold://");
+
 /** @type {BaseWindow | null} */
 let win = null;
 /** @type {WebContentsView | null} */
@@ -294,7 +297,7 @@ function applyLayout(layout) {
     return;
   }
 
-  const active = layout.activeTab;
+  const active = layout.activeTab && !isInternalUrl(layout.activeTab.url) ? layout.activeTab : null;
   for (const [tabId, entry] of pageViews) {
     if (!active || tabId !== active.id) entry.view.setVisible(false);
   }
@@ -309,13 +312,15 @@ function applyLayout(layout) {
     }
   }
 
-  if (layout.reference) {
+  const reference =
+    layout.reference && !isInternalUrl(layout.reference.url) ? layout.reference : null;
+  if (reference) {
     const view = ensureReferenceView();
     view.setVisible(true);
-    view.setBounds(boundsOf(layout.reference.rect));
-    if (referenceUrl !== layout.reference.url) {
-      referenceUrl = layout.reference.url;
-      view.webContents.loadURL(layout.reference.url).catch(() => undefined);
+    view.setBounds(boundsOf(reference.rect));
+    if (referenceUrl !== reference.url) {
+      referenceUrl = reference.url;
+      view.webContents.loadURL(reference.url).catch(() => undefined);
     }
   } else if (referenceView) {
     referenceView.setVisible(false);
@@ -418,6 +423,11 @@ ipcMain.on("scaffold:navigate", (_event, { tabId, url }) => {
   const entry = ensurePageView(tabId);
   entry.url = url;
   entry.view.webContents.loadURL(url).catch(() => undefined);
+});
+
+ipcMain.on("scaffold:relaunch", () => {
+  app.relaunch();
+  app.exit(0);
 });
 
 ipcMain.on("scaffold:close-tab", (_event, { tabId }) => destroyTab(tabId));

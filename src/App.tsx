@@ -9,9 +9,11 @@ import { ReferencePane } from "./components/ReferencePane";
 import { ShelfBar } from "./components/ShelfBar";
 import { TabStrip } from "./components/TabStrip";
 import { Toolbar } from "./components/Toolbar";
+import { UpdateDialog } from "./components/UpdateDialog";
 import { bridge, type ViewRect } from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
 import { fileStamp } from "./lib/time";
+import { checkForUpdate, type UpdateInfo } from "./lib/updates";
 import { internalPageOf, parseDomain } from "./lib/url";
 import { useActiveTab, useStore } from "./state/store";
 import type { KeptPage, Tab } from "./state/types";
@@ -57,6 +59,8 @@ export function App() {
   const [keepTabId, setKeepTabId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [updateOpen, setUpdateOpen] = useState(false);
 
   const stageRef = useRef<HTMLElement>(null);
   const referenceRef = useRef<HTMLElement>(null);
@@ -72,6 +76,23 @@ export function App() {
     return () => window.removeEventListener("scaffold:keep", open);
   }, []);
 
+  // A browser looks for a newer build quietly and says so once, in a small chip.
+  useEffect(() => {
+    let live = true;
+    const look = () => {
+      checkForUpdate().then((found) => {
+        if (live && found) setUpdate(found);
+      });
+    };
+    const first = window.setTimeout(look, 4000);
+    const every = window.setInterval(look, 6 * 60 * 60 * 1000);
+    return () => {
+      live = false;
+      window.clearTimeout(first);
+      window.clearInterval(every);
+    };
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const mod = event.metaKey || event.ctrlKey;
@@ -83,6 +104,7 @@ export function App() {
         setPaletteOpen(false);
         setKeepOpen(false);
         setMenu(null);
+        setUpdateOpen(false);
         return;
       }
       if (!mod) return;
@@ -445,8 +467,8 @@ export function App() {
 
   // Native views sit above the chrome, so a modal must lift them out of the way.
   useEffect(() => {
-    bridge?.setOverlay(keepOpen || paletteOpen);
-  }, [keepOpen, paletteOpen]);
+    bridge?.setOverlay(keepOpen || paletteOpen || updateOpen);
+  }, [keepOpen, paletteOpen, updateOpen]);
 
   useEffect(() => {
     if (!bridge) return;
@@ -459,13 +481,14 @@ export function App() {
       const pane = reference?.querySelector<HTMLElement>("[data-sheet='reference']");
       const activeRect = rectOf(sheet);
       const referenceRect = rectOf(pane);
+      // Internal pages are chrome, not pages: no native view may cover them.
       bridge!.syncLayout({
         activeTab:
-          activeRect && activeTab
+          activeRect && activeTab && internalPageOf(activeTab.url) === null
             ? { id: activeTab.id, url: activeTab.url, rect: activeRect }
             : null,
         reference:
-          referenceRect && state.reference
+          referenceRect && state.reference && !state.reference.url.startsWith("scaffold://")
             ? { url: state.reference.url, rect: referenceRect }
             : null,
       });
@@ -474,6 +497,9 @@ export function App() {
     sync();
     const observer = new ResizeObserver(sync);
     observer.observe(stage);
+    // An animated width has to reach the native view frame by frame.
+    const stageSheet = stage.querySelector<HTMLElement>("[data-sheet='active']");
+    if (stageSheet) observer.observe(stageSheet);
     if (reference) observer.observe(reference);
     window.addEventListener("resize", sync);
     return () => {
@@ -487,7 +513,11 @@ export function App() {
   return (
     <div className={"app" + (bridge?.platform === "darwin" ? " is-mac" : "")}>
       <TabStrip />
-      <Toolbar onOpenPalette={() => setPaletteOpen(true)} />
+      <Toolbar
+        onOpenPalette={() => setPaletteOpen(true)}
+        update={update}
+        onOpenUpdate={() => setUpdateOpen(true)}
+      />
 
       <main className="desk">
         {state.reference && (
@@ -522,6 +552,9 @@ export function App() {
             setKeepTabId(null);
           }}
         />
+      )}
+      {update && updateOpen && (
+        <UpdateDialog update={update} onClose={() => setUpdateOpen(false)} />
       )}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
     </div>

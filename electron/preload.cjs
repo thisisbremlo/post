@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("scaffold", {
   setOverlay: (open) => ipcRenderer.send("scaffold:overlay", Boolean(open)),
 
   navigate: (tabId, url) => ipcRenderer.send("scaffold:navigate", { tabId, url }),
+  relaunch: () => ipcRenderer.send("scaffold:relaunch"),
   closeTab: (tabId) => ipcRenderer.send("scaffold:close-tab", { tabId }),
   viewAction: (tabId, action) => ipcRenderer.send("scaffold:view-action", { tabId, action }),
 

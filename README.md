@@ -52,6 +52,17 @@ The start sheet is not a tab: it sits on the home button beside back, forward an
 reload, so the strip only ever holds pages you went somewhere to reach. There is one
 start sheet, never two.
 
+Breakpoints move like a window edge, not like a toggle: 360, 768 and fit are a real
+viewport width, so the sheet is animated to its new width (Motion) and the native view
+follows it frame by frame through the layout sync. A window resize follows the window
+with no easing, because nothing there should lag behind the pointer.
+
+Updates are Chrome's, minus the store: a build bakes the commit it came from, main is
+the release channel, and the app checks the tip of main at launch and every six hours.
+When main has moved past the running build, a small `update` chip appears in the
+toolbar; it says which build is on main, gives the pull command, and offers to
+relaunch. Nothing installs behind your back, and nothing of yours moves.
+
 Tab groups: drag one tab onto another and both land in a tinted group named after the
 target's domain. Click the group's chip to fold it away, double-click to rename it, the
 mark beside it lets the tabs out. New tabs opened from inside a group join it. `⌘⇧G`

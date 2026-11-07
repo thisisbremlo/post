@@ -1721,6 +1721,102 @@ svg {
   line-height: 1.7;
 }
 
+/* ---------- updates ---------- */
+
+.update-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(0, 51, 160, 0.28);
+  border-radius: 10px;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-size: 11px;
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease);
+}
+
+.update-chip:hover {
+  border-color: rgba(0, 51, 160, 0.5);
+  background: rgba(0, 51, 160, 0.15);
+}
+
+.update {
+  width: 600px;
+}
+
+.update-kicker {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-title {
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.update-line {
+  max-width: 46ch;
+  margin-top: 10px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.update-cmd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 7px 7px 7px 12px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 12px;
+  background: var(--cream);
+}
+
+.update-cmd code {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.update-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--sheet);
+  font-size: 12px;
+  transition: background-color 140ms var(--ease);
+}
+
+.update-go:hover {
+  background: var(--accent-ink);
+}
+
 /* ---------- context menu ---------- */
 
 .menu {

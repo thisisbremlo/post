@@ -1,9 +1,18 @@
+import type { UpdateInfo } from "../lib/updates";
 import { useActiveTab, useStore } from "../state/store";
 import { Icon } from "./Icon";
 import { Omnibox } from "./Omnibox";
 import { WidthPills } from "./WidthPills";
 
-export function Toolbar({ onOpenPalette }: { onOpenPalette: () => void }) {
+export function Toolbar({
+  onOpenPalette,
+  update,
+  onOpenUpdate,
+}: {
+  onOpenPalette: () => void;
+  update: UpdateInfo | null;
+  onOpenUpdate: () => void;
+}) {
   const { state, dispatch } = useStore();
   const tab = useActiveTab();
   const held = state.reference?.url === tab.url;
@@ -107,6 +116,19 @@ export function Toolbar({ onOpenPalette }: { onOpenPalette: () => void }) {
         <span>shelf</span>
         <span className="tnum shelf-chip-count">{state.shelf.length}</span>
       </button>
+
+      {update && (
+        <button
+          type="button"
+          className="update-chip"
+          aria-label={`update to ${update.version}`}
+          title={`Scaffold ${update.version} is on main — pull it and relaunch`}
+          onClick={onOpenUpdate}
+        >
+          <Icon name="export" size={13} />
+          <span>update</span>
+        </button>
+      )}
 
       <button
         type="button"

@@ -41,6 +41,8 @@ export interface ScaffoldBridge {
   /** Modal overlays must lift the native page views or they cover them. */
   setOverlay: (open: boolean) => void;
   navigate: (tabId: string, url: string) => void;
+  /** Chrome's own update button: quit and come back on the pulled build. */
+  relaunch: () => void;
   closeTab: (tabId: string) => void;
   viewAction: (tabId: string, action: "back" | "forward" | "reload") => void;
   onViewEvent: (handler: (event: NativeViewEvent) => void) => () => void;
