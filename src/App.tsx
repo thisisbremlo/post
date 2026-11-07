@@ -496,15 +496,6 @@ export function App() {
     });
   }, [dispatch]);
 
-  // The vault is the shell's, not the renderer's: only origin and username come back.
-  useEffect(() => {
-    if (!bridge) return;
-    bridge.vault
-      .list()
-      .then((credentials) => dispatch({ type: "set-credentials", credentials }))
-      .catch(() => undefined);
-  }, [dispatch]);
-
   useEffect(() => {
     if (!bridge) return;
     return bridge.onViewEvent((event) => {

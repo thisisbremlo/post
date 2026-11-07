@@ -5,14 +5,12 @@ const {
   WebContentsView,
   clipboard,
   ipcMain,
-  safeStorage,
   session,
   shell,
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
-const crypto = require("node:crypto");
-
+const { execFile } = require("node:child_process");
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
 const PARTITION = "persist:scaffold";
@@ -32,73 +30,6 @@ let referenceUrl = null;
 /** @type {object | null} */
 let lastLayout = null;
 let overlayOpen = false;
-
-/* ------------------------------------------------------------------ vault */
-
-const vaultFile = () => path.join(app.getPath("userData"), "vault.json");
-const fallbackKeyFile = () => path.join(app.getPath("userData"), "vault.key");
-
-/**
- * The OS keystore seals the vault: Keychain, DPAPI, libsecret or KWallet.
- * Without one, a key file with 0600 permissions and AES-256-GCM, which is
- * honest but weaker, so the passwords page says so in one line.
- */
-function vaultKey() {
-  const file = fallbackKeyFile();
-  if (fs.existsSync(file)) return Buffer.from(fs.readFileSync(file, "utf8"), "hex");
-  const key = crypto.randomBytes(32);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, key.toString("hex"), { mode: 0o600 });
-  return key;
-}
-
-function readVault() {
-  const file = vaultFile();
-  if (!fs.existsSync(file)) return [];
-  try {
-    const raw = fs.readFileSync(file);
-    const json = safeStorage.isEncryptionAvailable()
-      ? safeStorage.decryptString(raw)
-      : (() => {
-          const key = vaultKey();
-          const iv = raw.subarray(0, 12);
-          const tag = raw.subarray(12, 28);
-          const body = raw.subarray(28);
-          const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-          decipher.setAuthTag(tag);
-          return Buffer.concat([decipher.update(body), decipher.final()]).toString("utf8");
-        })();
-    return JSON.parse(json);
-  } catch {
-    return [];
-  }
-}
-
-function writeVault(entries) {
-  const json = JSON.stringify(entries);
-  let payload;
-  if (safeStorage.isEncryptionAvailable()) {
-    payload = safeStorage.encryptString(json);
-  } else {
-    const key = vaultKey();
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-    const body = Buffer.concat([cipher.update(json, "utf8"), cipher.final()]);
-    payload = Buffer.concat([iv, cipher.getAuthTag(), body]);
-  }
-  fs.mkdirSync(path.dirname(vaultFile()), { recursive: true });
-  fs.writeFileSync(vaultFile(), payload, { mode: 0o600 });
-}
-
-/** What the chrome is allowed to know: origin, username, last used. */
-function publicVault() {
-  return readVault().map(({ id, origin, username, lastUsed }) => ({
-    id,
-    origin,
-    username,
-    lastUsed: lastUsed || null,
-  }));
-}
 
 /* -------------------------------------------------------------- page views */
 
@@ -337,7 +268,6 @@ function ensurePageView(tabId) {
   const view = new WebContentsView({
     webPreferences: {
       partition: PARTITION,
-      preload: path.join(__dirname, "page-preload.cjs"),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -355,7 +285,6 @@ function ensureReferenceView() {
   referenceView = new WebContentsView({
     webPreferences: {
       partition: PARTITION,
-      preload: path.join(__dirname, "page-preload.cjs"),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -552,73 +481,18 @@ ipcMain.on("scaffold:view-action", (_event, { tabId, action }) => {
   if (action === "reload") contents.reload();
 });
 
-ipcMain.handle("scaffold:vault-protected", () => safeStorage.isEncryptionAvailable());
-
-ipcMain.handle("scaffold:vault-list", () => publicVault());
-
-ipcMain.handle("scaffold:vault-save", (_event, entry) => {
-  if (!entry || typeof entry.origin !== "string" || typeof entry.password !== "string") return;
-  const entries = readVault();
-  const existing = entries.find(
-    (item) => item.origin === entry.origin && item.username === entry.username,
-  );
-  if (existing) {
-    existing.password = entry.password;
-    existing.lastUsed = Date.now();
-  } else {
-    entries.push({
-      id: crypto.randomUUID(),
-      origin: entry.origin,
-      username: entry.username || "",
-      password: entry.password,
-      lastUsed: Date.now(),
-    });
+/** Google Password Manager is Chrome's, so Post opens it rather than keeping a copy. */
+ipcMain.handle("scaffold:open-password-manager", async () => {
+  if (process.platform === "darwin") {
+    const candidates = [
+      "/Applications/Google Chrome.app",
+      path.join(app.getPath("home"), "Applications/Google Chrome.app"),
+    ];
+    if (candidates.some((candidate) => fs.existsSync(candidate))) {
+      execFile("open", ["-a", "Google Chrome", "chrome://password-manager/passwords"]);
+      return "chrome";
+    }
   }
-  writeVault(entries);
-});
-
-ipcMain.handle("scaffold:vault-capture", (_event, entry) => {
-  if (!entry || typeof entry.origin !== "string" || typeof entry.password !== "string") return;
-  const entries = readVault();
-  const existing = entries.find(
-    (item) => item.origin === entry.origin && item.username === entry.username,
-  );
-  if (existing) {
-    existing.password = entry.password;
-    existing.lastUsed = Date.now();
-  } else {
-    entries.push({
-      id: crypto.randomUUID(),
-      origin: entry.origin,
-      username: entry.username || "",
-      password: entry.password,
-      lastUsed: Date.now(),
-    });
-  }
-  writeVault(entries);
-});
-
-ipcMain.handle("scaffold:vault-remove", (_event, id) => {
-  writeVault(readVault().filter((entry) => entry.id !== id));
-});
-
-ipcMain.handle("scaffold:vault-fill", async (_event, tabId) => {
-  const entry = pageViews.get(tabId);
-  if (!entry) return false;
-  let origin;
-  try {
-    origin = new URL(entry.view.webContents.getURL()).origin;
-  } catch {
-    return false;
-  }
-  const credential = readVault().find((item) => item.origin === origin);
-  if (!credential) return false;
-  // The password is handed to the isolated preload, never to the chrome.
-  entry.view.webContents.send("scaffold:fill-login", {
-    username: credential.username,
-    password: credential.password,
-  });
-  credential.lastUsed = Date.now();
-  writeVault(readVault().map((item) => (item.id === credential.id ? credential : item)));
-  return true;
+  await shell.openExternal("https://passwords.google.com");
+  return "web";
 });

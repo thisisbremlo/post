@@ -1490,14 +1490,36 @@ svg {
   text-align: right;
 }
 
-.row--credential {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 220px) 120px 30px;
-  height: 54px;
+/* ---------- password manager handoff ---------- */
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 26px;
 }
 
-.row--credential .row-url {
-  color: var(--ink-2);
-  font-size: 13px;
+.page-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background 160ms ease;
+}
+
+.page-action:hover:not(:disabled) {
+  background: var(--accent-ink, var(--accent));
+}
+
+.page-action:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 /* ---------- catalogue ---------- */

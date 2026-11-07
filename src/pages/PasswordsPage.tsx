@@ -1,25 +1,34 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { bridge, isNative } from "../lib/bridge";
-import { relativeTime } from "../lib/time";
-import { useStore } from "../state/store";
+import { bridge } from "../lib/bridge";
 import { Icon } from "../components/Icon";
+import { useStore } from "../state/store";
 
 export function PasswordsPage() {
-  const { state, dispatch } = useStore();
-  const [protectedByKeyring, setProtectedByKeyring] = useState<boolean | null>(null);
+  const { dispatch } = useStore();
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!bridge) return;
-    bridge
-      .vaultProtected()
-      .then(setProtectedByKeyring)
-      .catch(() => setProtectedByKeyring(false));
-  }, []);
-
-  const remove = (id: string) => {
-    dispatch({ type: "remove-credential", id });
-    void bridge?.vault.remove(id);
+  const open = async () => {
+    if (busy) return;
+    if (!bridge) {
+      window.open("https://passwords.google.com", "_blank", "noreferrer");
+      return;
+    }
+    setBusy(true);
+    try {
+      const where = await bridge.openPasswordManager();
+      dispatch({
+        type: "notice",
+        text:
+          where === "chrome"
+            ? "Google Password Manager is open in Chrome"
+            : "opened passwords.google.com",
+      });
+    } catch {
+      dispatch({ type: "notice", text: "couldn't open Google Password Manager" });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -28,65 +37,34 @@ export function PasswordsPage() {
         <header className="page-head">
           <div>
             <h1 className="page-title">passwords</h1>
-            <p className="page-meta tnum">
-              {state.credentials.length} saved · this machine only
-            </p>
+            <p className="page-meta">Google Password Manager · nothing stored here</p>
           </div>
         </header>
 
         <p className="lede">
-          The vault is one encrypted file in your profile. The chrome only ever sees the origin and
-          the username: the password travels from the page, through the isolated preload, into the
-          vault, and back the same way. It never enters this UI, and it is never stored in a page.
+          Post keeps no passwords. The logins you have are the ones Google Password Manager
+          already holds, and this page opens them: Chrome's own manager on this machine, or
+          passwords.google.com when Chrome is not installed.
         </p>
 
-        {!isNative && (
-          <p className="aside-note">
-            This is the web preview, so the vault is not wired up here. Capture and fill run in the
-            desktop app, where the preload scripts can reach the form. What you see below is the
-            surface those calls fill.
-          </p>
-        )}
-
-        {state.credentials.length === 0 ? (
-          <p className="empty">
-            No logins saved. Submit a sign-in form in the desktop app and it lands here, with the
-            password already sealed.
-          </p>
-        ) : (
-          <ul className="rows">
-            {state.credentials.map((credential) => (
-              <li key={credential.id}>
-                <div className="row row--credential">
-                  <span className="row-title tnum">{credential.origin}</span>
-                  <span className="row-url">{credential.username}</span>
-                  <span className="row-time tnum">
-                    {credential.lastUsed ? relativeTime(credential.lastUsed) : "not used yet"}
-                  </span>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    aria-label={`remove ${credential.origin}`}
-                    title="remove"
-                    onClick={() => remove(credential.id)}
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="page-actions">
+          <button type="button" className="page-action" onClick={open} disabled={busy}>
+            <Icon name="key" size={14} />
+            {bridge ? "open Google Password Manager" : "open passwords.google.com"}
+          </button>
+        </div>
 
         <p className="fineprint">
-          {protectedByKeyring === false
-            ? "This machine has no keyring, so the vault is sealed with a fallback key. It is still encrypted, but not against someone who already has your account. A master password is the next step here."
-            : "Sealed with the OS keystore — Keychain on macOS, DPAPI on Windows, libsecret or KWallet on Linux. No sync, no server, no account. An encrypted export is the only way it leaves."}
+          Chromium's password manager is a Chrome component, not part of the engine Post
+          embeds, so Post cannot draw that page or fill from it. A second vault would only
+          mean a second place to look, so there is none: nothing to sync, nothing to leak,
+          no account.
         </p>
 
         <p className="fineprint">
-          Explicitly not here: card autofill, one-time codes, breach lookups, shared vaults. A
-          designer's staging logins are the job, not a family password manager.
+          Saved logins follow your Google account, so a password saved once in Chrome is
+          there the next time you need it. In the web preview the button simply opens
+          passwords.google.com in a tab.
         </p>
       </div>
     </div>

@@ -48,21 +48,14 @@ export interface UpdateNotice {
   notes: string;
 }
 
-export interface VaultEntry {
-  id: string;
-  origin: string;
-  username: string;
-  lastUsed: number | null;
-}
-
 /**
  * The contract between the chrome renderer and the Electron shell.
  * Absent in the web preview harness, where pages fall back to a placeholder.
  */
 export interface ScaffoldBridge {
   platform: string;
-  /** True when the OS keyring backs the vault. False means the weak fallback key. */
-  vaultProtected: () => Promise<boolean>;
+  /** Opens Google Password Manager: Chrome's own page, or passwords.google.com. */
+  openPasswordManager: () => Promise<"chrome" | "web">;
   syncLayout: (layout: LayoutSync) => void;
   /** Modal overlays must lift the native page views or they cover them. */
   setOverlay: (open: boolean) => void;
@@ -78,13 +71,6 @@ export interface ScaffoldBridge {
   checkUpdates: () => void;
   /** Menu items are the shell's; the chrome owns what they do. */
   onCommand: (handler: (command: BrowserCommand) => void) => () => void;
-  vault: {
-    list: () => Promise<VaultEntry[]>;
-    save: (entry: { origin: string; username: string; password: string }) => Promise<void>;
-    remove: (id: string) => Promise<void>;
-    /** Fills the login for the tab's current origin. Resolves false when nothing matched. */
-    fill: (tabId: string) => Promise<boolean>;
-  };
 }
 
 declare global {

@@ -52,13 +52,6 @@ export interface Sitting {
   tabs: { url: string; title: string; group?: string | null }[];
 }
 
-export interface Credential {
-  id: string;
-  origin: string;
-  username: string;
-  lastUsed: number | null;
-}
-
 export interface Reference {
   url: string;
   title: string;
@@ -72,7 +65,6 @@ export interface ScaffoldState {
   shelf: KeptPage[];
   history: HistoryEntry[];
   sittings: Sitting[];
-  credentials: Credential[];
   /** The shelf bar is dismissed from the bottom of the desk, not emptied. */
   shelfBarOpen: boolean;
   /** Ephemeral one-line confirmation, never persisted. */

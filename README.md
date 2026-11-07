@@ -106,15 +106,15 @@ harness offers the same actions for the text it actually renders.
 
 ## Privacy, stated plainly
 
-What the shell does: no Google services (Electron ships without Google API keys,
-sign-in, sync or the Chrome password manager), no telemetry of ours, no account, no
-server, no analytics SDK. A local profile on disk; export is a file you own.
+What the shell does: no Google services inside the app (Electron ships without Google
+API keys, sign-in, sync or Chrome's password manager), no telemetry of ours, no account,
+no server, no analytics SDK. A local profile on disk; export is a file you own.
 
-The credentials vault is one file in the profile, sealed with the OS keystore through
-`safeStorage` (Keychain, DPAPI, libsecret/KWallet). Without a keyring it falls back to
-an AES-256-GCM key file with `0600` permissions, and the passwords page says so rather
-than pretending. The chrome only ever learns origin and username; capture and fill go
-through the page's isolated preload.
+Passwords are not Post's. Saved logins belong to Google Password Manager, which is a
+Chrome component rather than part of the engine Post embeds, so `scaffold://passwords`
+opens it instead of copying it: Google Chrome at `chrome://password-manager/passwords`
+when it is installed, passwords.google.com otherwise. Post keeps no vault, captures no
+form and fills nothing, so there is no second store to sync or leak.
 
 What this engine cannot do, on the tin: this is Electron's Chromium, not
 ungoogled-chromium. It does not use Google services, but it cannot remove their code
@@ -125,7 +125,8 @@ is the next move, and it is weeks-per-release work, not a weekend.
 ## Not built yet
 
 - Favicons, tab drag-reorder, downloads, find-in-page, packaging and signing.
-- Capture and fill are wired in the shell but not exercised here: this environment has
-  no display, so the Electron path is unverified beyond review.
+- The passwords page hands off to Chrome's own manager on macOS; the shell handler is
+  checked for syntax and reviewed, but this environment has no display, so the handoff
+  itself is unverified here.
 - Contact-sheet export, import from bookmarks, per-site width memory, annotation.
 - Extension support is deliberately absent for now; it quietly undermines the posture.

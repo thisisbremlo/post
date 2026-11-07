@@ -3,7 +3,6 @@ import type { Dispatch, ReactNode } from "react";
 
 import { internalPageOf, parseDomain, titleFor } from "../lib/url";
 import type {
-  Credential,
   GroupColor,
   HistoryEntry,
   ScaffoldState,
@@ -72,7 +71,6 @@ function initialState(): ScaffoldState {
     shelf: [],
     history: [],
     sittings: [],
-    credentials: [],
     shelfBarOpen: true,
     notice: null,
   };
@@ -104,8 +102,6 @@ export type Action =
   | { type: "save-sitting"; name: string }
   | { type: "restore-sitting"; id: string }
   | { type: "delete-sitting"; id: string }
-  | { type: "set-credentials"; credentials: Credential[] }
-  | { type: "remove-credential"; id: string }
   | { type: "clear-history" }
   | { type: "notice"; text: string | null };
 
@@ -463,12 +459,6 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
     case "delete-sitting":
       return { ...state, sittings: state.sittings.filter((item) => item.id !== action.id) };
 
-    case "set-credentials":
-      return { ...state, credentials: action.credentials };
-
-    case "remove-credential":
-      return { ...state, credentials: state.credentials.filter((item) => item.id !== action.id) };
-
     case "clear-history":
       return { ...state, history: [] };
 
@@ -516,7 +506,6 @@ function restore(): ScaffoldState {
       shelf: Array.isArray(parsed.shelf) ? parsed.shelf : [],
       history: Array.isArray(parsed.history) ? parsed.history : [],
       sittings: Array.isArray(parsed.sittings) ? parsed.sittings : [],
-      credentials: Array.isArray(parsed.credentials) ? parsed.credentials : [],
       shelfBarOpen: parsed.shelfBarOpen !== false,
       notice: null,
     };
