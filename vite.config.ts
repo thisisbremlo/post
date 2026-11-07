@@ -22,7 +22,8 @@ export default defineConfig({
   // Relative base so the same build can be loaded from file:// inside Electron.
   base: "./",
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    // SCAFFOLD_VERSION lets a test build pretend to be older than the feed.
+    __APP_VERSION__: JSON.stringify(process.env.SCAFFOLD_VERSION ?? pkg.version),
     __APP_COMMIT__: JSON.stringify(process.env.SCAFFOLD_COMMIT ?? commit()),
   },
   server: {

@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld("scaffold", {
     return () => ipcRenderer.removeListener("scaffold:command", listener);
   },
 
+  checkUpdates: () => ipcRenderer.send("scaffold:check-updates"),
+
   onUpdate: (handler) => {
     const listener = (_event, notice) => handler(notice);
     ipcRenderer.on("scaffold:update", listener);

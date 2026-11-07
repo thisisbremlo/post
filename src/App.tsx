@@ -86,6 +86,26 @@ export function App() {
     });
   }, []);
 
+  // Coming back to the window is when a browser looks again, no more than once
+  // every five minutes, so focus does not become a polling loop.
+  useEffect(() => {
+    if (!bridge) return;
+    let last = 0;
+    const look = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - last < 5 * 60 * 1000) return;
+      last = now;
+      bridge!.checkUpdates();
+    };
+    window.addEventListener("focus", look);
+    document.addEventListener("visibilitychange", look);
+    return () => {
+      window.removeEventListener("focus", look);
+      document.removeEventListener("visibilitychange", look);
+    };
+  }, []);
+
   // A browser looks for a newer build quietly and says so once, in a small chip.
   useEffect(() => {
     if (bridge) return;

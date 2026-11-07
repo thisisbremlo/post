@@ -12,7 +12,6 @@ const {
 const path = require("node:path");
 const fs = require("node:fs");
 const crypto = require("node:crypto");
-const { execFile } = require("node:child_process");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
@@ -289,39 +288,40 @@ function applyMenu() {
 
 /* ---------------------------------------------------------------- updates */
 
-const PROJECT_DIR = path.join(__dirname, "..");
+// The commit Atom feed has no rate limit and no CORS, which is why the shell
+// reads it: the packaged app can look at a public repo with no token at all.
+const UPDATE_ATOM = "https://github.com/thisisbremlo/post/commits/main.atom";
+const UPDATE_FEED = "https://raw.githubusercontent.com/thisisbremlo/post/main/update.json";
 
-function git(args) {
-  return new Promise((resolve, reject) => {
-    execFile("git", args, { cwd: PROJECT_DIR, timeout: 20000 }, (error, stdout) => {
-      if (error) reject(error);
-      else resolve(stdout.trim());
-    });
-  });
-}
+const quiet = (promise) => promise.catch(() => null);
 
 /**
- * A private repo cannot answer an unauthenticated HTTP check, but this checkout
- * already knows how to talk to its own remote. Fetch quietly and tell the chrome
- * what main is; the chrome compares that with the commit it was built from.
+ * What main is right now, and what the repo says about it. The chrome compares
+ * that with the version and commit baked into the running build.
  */
 async function checkForUpdates() {
   try {
-    await git(["fetch", "--quiet", "--no-tags", "origin", "main"]);
-    const [sha, ...message] = (await git(["log", "-1", "--format=%H%n%s", "FETCH_HEAD"])).split("\n");
-    let version = "";
-    try {
-      version = JSON.parse(await git(["show", "FETCH_HEAD:package.json"])).version ?? "";
-    } catch {
-      /* an unreadable manifest is not a failed check */
-    }
+    const [atom, feed] = await Promise.all([
+      quiet(fetch(UPDATE_ATOM).then((response) => (response.ok ? response.text() : ""))),
+      quiet(
+        fetch(UPDATE_FEED, { cache: "no-store" }).then((response) =>
+          response.ok ? response.json() : null,
+        ),
+      ),
+    ]);
+
+    const entry = (atom ?? "").match(/<entry>([\s\S]*?)<\/entry>/)?.[1] ?? "";
+    const sha = entry.match(/Commit\/([0-9a-f]{40})/)?.[1] ?? "";
+    const version = feed?.version ?? "";
+    if (!sha && !version) return;
+
     chromeView?.webContents.send("scaffold:update", {
-      sha: sha ?? "",
+      sha,
       version,
-      notes: message.join(" "),
+      notes: feed?.notes ?? "",
     });
   } catch {
-    /* no git, no remote or no network: silently nothing new */
+    /* offline, blocked or rate limited: silently nothing new */
   }
 }
 
@@ -505,8 +505,9 @@ app.whenReady().then(() => {
   applyMenu();
   createWindow();
 
-  setTimeout(checkForUpdates, 6000);
-  setInterval(checkForUpdates, 6 * 60 * 60 * 1000);
+  setTimeout(checkForUpdates, 5000);
+  // Every half hour, plus once whenever the window comes back to the front.
+  setInterval(checkForUpdates, 30 * 60 * 1000);
 
   app.on("activate", () => {
     if (!BaseWindow.getAllWindows().length) createWindow();
@@ -518,6 +519,8 @@ app.on("window-all-closed", () => {
 });
 
 /* --------------------------------------------------------------------- ipc */
+
+ipcMain.on("scaffold:check-updates", () => checkForUpdates());
 
 ipcMain.on("scaffold:sync-layout", (_event, layout) => applyLayout(layout));
 

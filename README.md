@@ -77,11 +77,16 @@ viewport width, so the sheet is animated to its new width (Motion) and the nativ
 follows it frame by frame through the layout sync. A window resize follows the window
 with no easing, because nothing there should lag behind the pointer.
 
-Updates are Chrome's, minus the store: a build bakes the commit it came from, main is
-the release channel, and the app checks the tip of main at launch and every six hours.
-In the shell that check goes through the checkout's own git remote, which is what lets a
-private repo work without a token; the web harness asks the public feed and stays quiet
-when it cannot answer.
+Updates are Chrome's, minus the store: a build bakes the version and commit it came
+from, main is the release channel, and the app looks at the tip of main five seconds
+after launch, every half hour, and whenever the window comes back to the front.
+
+The shell reads GitHub's commit Atom feed for the head of main (no token, no rate
+limit, works from a packaged app) and the repo's own `update.json` for the version and
+the one-line note; the harness asks the same files over the public API. Every commit is
+therefore visible, whether or not the version moved. `npm run stamp` refreshes
+`update.json`; `SCAFFOLD_VERSION=0.2.0 npm run dev` pretends to be an older build when
+you want to see the chip.
 When main has moved past the running build, a small `update` chip appears in the
 toolbar; it says which build is on main, gives the pull command, and offers to
 relaunch. Nothing installs behind your back, and nothing of yours moves.

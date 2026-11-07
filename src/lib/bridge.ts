@@ -74,6 +74,8 @@ export interface ScaffoldBridge {
   onViewEvent: (handler: (event: NativeViewEvent) => void) => () => void;
   /** The shell fetches main through the checkout's own remote; null means quiet. */
   onUpdate: (handler: (notice: UpdateNotice | null) => void) => () => void;
+  /** Ask main to look again, e.g. when the window comes back to the front. */
+  checkUpdates: () => void;
   /** Menu items are the shell's; the chrome owns what they do. */
   onCommand: (handler: (command: BrowserCommand) => void) => () => void;
   vault: {
