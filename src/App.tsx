@@ -69,6 +69,30 @@ export function App() {
 
   const keepTab = state.tabs.find((tab) => tab.id === keepTabId) ?? activeTab;
 
+  // One dialog per new build, not per launch: closing it is enough until main moves again.
+  const seenKey = (info: UpdateInfo) => info.commit || info.version;
+  const announce = (found: UpdateInfo | null) => {
+    if (!found) return;
+    setUpdate(found);
+    let seen: string | null = null;
+    try {
+      seen = localStorage.getItem("scaffold.update.seen");
+    } catch {
+      /* private mode */
+    }
+    if (seenKey(found) && seenKey(found) !== seen) setUpdateOpen(true);
+  };
+  const dismissUpdate = () => {
+    if (update && seenKey(update)) {
+      try {
+        localStorage.setItem("scaffold.update.seen", seenKey(update));
+      } catch {
+        /* private mode */
+      }
+    }
+    setUpdateOpen(false);
+  };
+
   // ⌘D, and the toolbar button, both open the same one-line note.
   useEffect(() => {
     const open = () => setKeepOpen(true);
@@ -80,10 +104,7 @@ export function App() {
   // repo needs no token; the harness asks the public feed instead.
   useEffect(() => {
     if (!bridge) return;
-    return bridge.onUpdate((notice) => {
-      const found = notice ? updateFromCommit(notice) : null;
-      if (found) setUpdate(found);
-    });
+    return bridge.onUpdate((notice) => announce(notice ? updateFromCommit(notice) : null));
   }, []);
 
   // Coming back to the window is when a browser looks again, no more than once
@@ -112,7 +133,7 @@ export function App() {
     let live = true;
     const look = () => {
       checkForUpdate().then((found) => {
-        if (live && found) setUpdate(found);
+        if (live) announce(found);
       });
     };
     const first = window.setTimeout(look, 4000);
@@ -621,9 +642,7 @@ export function App() {
           }}
         />
       )}
-      {update && updateOpen && (
-        <UpdateDialog update={update} onClose={() => setUpdateOpen(false)} />
-      )}
+      {update && updateOpen && <UpdateDialog update={update} onClose={dismissUpdate} />}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
     </div>
   );
