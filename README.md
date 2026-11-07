@@ -50,8 +50,10 @@ skips the installer when you only want the unpacked app.
   sites refuse to be framed). It exists so the interface can be reviewed anywhere.
   Native page views and their context menus only run in the desktop app.
 - **Chromium shell (`chromium/`)** — the next engine, in its own folder: the same desk,
-  driven by `chrome.*` instead of Electron IPC, running as a real Chromium extension
-  today and as `chrome://post` once the frame patch lands. See `chromium/README.md`.
+  driven by `chrome.*` instead of Electron IPC. `chromium/fork/` is the fork build that
+  adds `chrome://post` to a Chromium checkout; the extension under `chromium/shell/` is
+  the harness that keeps the desk testable until that build exists. See
+  `chromium/README.md` and `chromium/fork/README.md`.
 
 State lives in the chrome: tabs, back stacks, tab groups, the shelf, sittings, the
 reference pane. It persists to the profile on disk and, in the desktop app, syncs the

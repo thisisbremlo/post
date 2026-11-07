@@ -30,10 +30,10 @@ unpacked**. The manifest pins a public key, so the extension ID is stable:
 ## What is not built yet
 
 The window around the desk is still Chromium's. Chromium draws its own toolbar and tab
-strip, and this build does not replace them. That replacement is the fork milestone: a
-small patch series over ungoogled-chromium that swaps `chrome/browser/ui`'s toolbar and
-frame for a `chrome://post` WebUI and keeps every other layer untouched — including the
-extension system, which is the reason for the whole move.
+strip, and this build does not replace them. That replacement is the fork milestone:
+[`fork/`](fork/README.md) is the overlay that adds `chrome://post` to a Chromium
+checkout, with the tab and shelf bridge the desk needs to leave the extension harness
+behind. It has not been compiled yet — see its README before reading a build as done.
 
 [docs/architecture.md](docs/architecture.md) records why CEF is not the path,
 [docs/build.md](docs/build.md) is the macOS fork recipe, and

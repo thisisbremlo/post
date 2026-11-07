@@ -28,26 +28,24 @@ ungoogled-chromium documents the exact flags for its current release in
 `docs/building.md`; follow that file rather than any command copied from here, because
 the domain substitution and pruning steps move between releases.
 
-## 2. Post's patch series
+## 2. Post's overlay
 
-```
-patches/
-  series                     one patch file per line, applied in order
-  0001-post-webui.patch      new: chrome/browser/ui/webui/post/**, resources, BUILD.gn
-  0002-post-frame.patch      edit: browser_view.cc, toolbar_view.cc, tab_strip_region_view
-  0003-post-new-tab.patch    edit: the new tab page's URL and its WebUI registration
-```
-
-The fork applies its series on top of ungoogled-chromium's own, not instead of it:
+The fork lives in [`chromium/fork`](../fork/README.md). It is an overlay plus two
+anchor-based edits, not a pile of diffs:
 
 ```bash
-python3 utils/patches.py apply -p macos
-git apply --3way ../post/patches/*.patch
+npm run fork:assets                                  # desk + resources + .grd
+python3 chromium/fork/integrate.py --src ~/chromium/src
 ```
 
-Keep `0002` small and mechanical. Every release rebases it, and the smaller it is, the
-cheaper the rebase. New files (the desk's WebUI, its resources, its `BUILD.gn` target) do
-not conflict; edits to `browser_view.cc` do.
+`integrate.py` copies `fork/overlay/` into the checkout, registers `PostUIConfig` in
+`chrome/browser/ui/webui/chrome_web_ui_configs.cc` and adds the target to
+`chrome/browser/ui/webui/BUILD.gn`. It refuses to guess when an anchor moved. The frame
+patch (toolbar and tab strip replaced by the desk) is milestone 2 and is not part of this
+scaffold yet.
+
+Keep the overlay small. Every Chromium release moves headers and GN targets; new files
+are cheap to rebase, edits to `browser_view.cc` are not.
 
 ## 3. The desk bundle
 

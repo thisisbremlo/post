@@ -12,3 +12,6 @@ artifacts/
 electron/checkout.json
 dist-shell/
 .chromium-profile/
+# built into the fork overlay by `npm run fork:assets`
+chromium/fork/overlay/chrome/browser/ui/webui/post/resources/
+__pycache__/
