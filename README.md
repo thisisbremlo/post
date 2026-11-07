@@ -48,7 +48,7 @@ skips the installer when you only want the unpacked app.
 - **Web harness (`src/`)** — the same chrome with no engine. Pages become a *held
   sheet* that says where the page would be, and offers to load a live frame (some
   sites refuse to be framed). It exists so the interface can be reviewed anywhere.
-  Capture and fill in the password vault only run in the desktop app.
+  Native page views and their context menus only run in the desktop app.
 
 State lives in the chrome: tabs, back stacks, tab groups, the shelf, sittings, the
 reference pane. It persists to the profile on disk and, in the desktop app, syncs the
@@ -139,11 +139,9 @@ What the shell does: no Google services inside the app (Electron ships without G
 API keys, sign-in, sync or Chrome's password manager), no telemetry of ours, no account,
 no server, no analytics SDK. A local profile on disk; export is a file you own.
 
-Passwords are not Post's. Saved logins belong to Google Password Manager, which is a
-Chrome component rather than part of the engine Post embeds, so `scaffold://passwords`
-opens it instead of copying it: Google Chrome at `chrome://password-manager/passwords`
-when it is installed, passwords.google.com otherwise. Post keeps no vault, captures no
-form and fills nothing, so there is no second store to sync or leak.
+Turbo notes are the bolt in the toolbar: one line, Enter to save, kept in the profile
+with the desk and listed at `scaffold://turbo`. There is no vault, no capture and no
+account behind them; a note is a line you wrote, on this machine, and nowhere else.
 
 What this engine cannot do, on the tin: this is Electron's Chromium, not
 ungoogled-chromium. It does not use Google services, but it cannot remove their code
@@ -155,8 +153,6 @@ is the next move, and it is weeks-per-release work, not a weekend.
 
 - Tab drag-reorder, find-in-page, and Windows/Linux updates: the release workflow
   covers macOS only, and the unpacked Windows and Linux targets have no updater.
-- The passwords page hands off to Chrome's own manager on macOS; the shell handler is
-  checked for syntax and reviewed, but this environment has no display, so the handoff
-  itself is unverified here.
+- Turbo notes cannot be searched or pinned yet; the list is chronological, newest first.
 - Contact-sheet export, import from bookmarks, per-site width memory, annotation.
 - Extension support is deliberately absent for now; it quietly undermines the posture.

@@ -1,10 +1,10 @@
 import { internalPageOf } from "../lib/url";
 import { HistoryPage } from "./HistoryPage";
-import { PasswordsPage } from "./PasswordsPage";
 import { SettingsPage } from "./SettingsPage";
 import { ShelfPage } from "./ShelfPage";
 import { SittingsPage } from "./SittingsPage";
 import { StartPage } from "./StartPage";
+import { TurboPage } from "./TurboPage";
 import { UpdatesPage } from "./UpdatesPage";
 
 export function PageByUrl({ url, title }: { url: string; title: string }) {
@@ -15,8 +15,8 @@ export function PageByUrl({ url, title }: { url: string; title: string }) {
       return <ShelfPage />;
     case "sittings":
       return <SittingsPage />;
-    case "passwords":
-      return <PasswordsPage />;
+    case "turbo":
+      return <TurboPage />;
     case "settings":
       return <SettingsPage />;
     case "updates":

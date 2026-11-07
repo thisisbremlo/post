@@ -2,12 +2,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 /**
  * The chrome renderer gets exactly this: layout reconciliation, navigation
- * commands, and the one call that hands passwords back to Chrome's manager.
+ * commands, and the update installer's progress.
  */
 contextBridge.exposeInMainWorld("scaffold", {
   platform: process.platform,
-
-  openPasswordManager: () => ipcRenderer.invoke("scaffold:open-password-manager"),
 
   installUpdate: () => ipcRenderer.invoke("scaffold:install-update"),
 

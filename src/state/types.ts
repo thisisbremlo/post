@@ -15,7 +15,7 @@ export type InternalPage =
   | "history"
   | "shelf"
   | "sittings"
-  | "passwords"
+  | "turbo"
   | "settings"
   | "updates";
 
@@ -60,6 +60,12 @@ export interface HistoryEntry {
   visitedAt: number;
 }
 
+export interface Note {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
 export interface Sitting {
   id: string;
   name: string;
@@ -81,6 +87,8 @@ export interface ScaffoldState {
   shelf: KeptPage[];
   history: HistoryEntry[];
   sittings: Sitting[];
+  /** Turbo notes: one line each, newest first. */
+  notes: Note[];
   /** Browser behaviour, the only things worth a preference. */
   settings: Settings;
   /** The shelf bar is dismissed from the bottom of the desk, not emptied. */

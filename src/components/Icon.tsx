@@ -32,6 +32,7 @@ import {
   Ungroup,
   Video,
   X,
+  Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -48,6 +49,7 @@ export type IconName =
   | "search"
   | "more"
   | "settings"
+  | "zap"
   | "arrow-up-right"
   | "trash"
   | "chevron-down"
@@ -84,6 +86,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   search: Search,
   more: MoreHorizontal,
   settings: SlidersHorizontal,
+  zap: Zap,
   "arrow-up-right": ArrowUpRight,
   trash: Trash2,
   "chevron-down": ChevronDown,

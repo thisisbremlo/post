@@ -5,7 +5,7 @@ const INTERNAL_TITLES: Record<InternalPage, string> = {
   history: "history",
   shelf: "shelf",
   sittings: "sittings",
-  passwords: "passwords",
+  turbo: "turbo notes",
   settings: "settings",
   updates: "updates",
 };

@@ -10,10 +10,12 @@ import { WidthPills } from "./WidthPills";
 
 export function Toolbar({
   onOpenPalette,
+  onOpenTurbo,
   update,
   onOpenUpdate,
 }: {
   onOpenPalette: () => void;
+  onOpenTurbo: (box: DOMRect) => void;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
 }) {
@@ -51,10 +53,10 @@ export function Toolbar({
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://shelf" }),
     },
     {
-      id: "passwords",
-      label: "passwords",
-      icon: "key",
-      onSelect: () => dispatch({ type: "navigate", url: "scaffold://passwords" }),
+      id: "turbo",
+      label: "turbo notes",
+      icon: "zap",
+      onSelect: () => dispatch({ type: "navigate", url: "scaffold://turbo" }),
     },
   ];
 
@@ -128,11 +130,11 @@ export function Toolbar({
       <button
         type="button"
         className="icon-btn"
-        aria-label="passwords"
-        title="passwords"
-        onClick={() => dispatch({ type: "navigate", url: "scaffold://passwords" })}
+        aria-label="turbo notes"
+        title="turbo notes — a thought, one line"
+        onClick={(event) => onOpenTurbo(event.currentTarget.getBoundingClientRect())}
       >
-        <Icon name="key" size={16} />
+        <Icon name="zap" size={16} />
       </button>
 
       <button

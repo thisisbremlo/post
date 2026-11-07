@@ -5,6 +5,7 @@ import { internalPageOf, parseDomain, titleFor } from "../lib/url";
 import type {
   GroupColor,
   HistoryEntry,
+  Note,
   ScaffoldState,
   Settings,
   Sitting,
@@ -73,6 +74,7 @@ function initialState(): ScaffoldState {
     shelf: [],
     history: [],
     sittings: [],
+    notes: [],
     settings: DEFAULT_SETTINGS,
     shelfBarOpen: true,
     notice: null,
@@ -106,6 +108,8 @@ export type Action =
   | { type: "restore-sitting"; id: string }
   | { type: "delete-sitting"; id: string }
   | { type: "clear-history" }
+  | { type: "note-add"; text: string }
+  | { type: "note-remove"; id: string }
   | { type: "settings"; settings: Partial<Settings> }
   | { type: "notice"; text: string | null };
 
@@ -466,6 +470,16 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
     case "clear-history":
       return { ...state, history: [] };
 
+    case "note-add": {
+      const text = action.text.trim();
+      if (!text) return state;
+      const note: Note = { id: uid(), text, createdAt: Date.now() };
+      return { ...state, notes: [note, ...state.notes], notice: "saved to turbo notes" };
+    }
+
+    case "note-remove":
+      return { ...state, notes: state.notes.filter((note) => note.id !== action.id) };
+
     case "settings":
       return { ...state, settings: { ...DEFAULT_SETTINGS, ...state.settings, ...action.settings } };
 
@@ -514,6 +528,7 @@ function restore(): ScaffoldState {
       shelf: Array.isArray(parsed.shelf) ? parsed.shelf : [],
       history: Array.isArray(parsed.history) ? parsed.history : [],
       sittings: Array.isArray(parsed.sittings) ? parsed.sittings : [],
+      notes: Array.isArray(parsed.notes) ? parsed.notes : [],
       settings: {
         newTab: stored.newTab === "start" ? "start" : "google",
         search: stored.search === "google" ? "google" : "duckduckgo",

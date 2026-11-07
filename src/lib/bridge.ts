@@ -68,8 +68,6 @@ export interface InstallEvent {
  */
 export interface ScaffoldBridge {
   platform: string;
-  /** Opens Google Password Manager: Chrome's own page, or passwords.google.com. */
-  openPasswordManager: () => Promise<"chrome" | "web">;
   /** Pulls, rebuilds and replaces this app from the checkout it was built in. */
   installUpdate: () => Promise<"started" | "manual">;
   onInstallEvent: (handler: (event: InstallEvent) => void) => () => void;

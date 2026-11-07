@@ -9,6 +9,7 @@ import { ReferencePane } from "./components/ReferencePane";
 import { ShelfBar } from "./components/ShelfBar";
 import { TabStrip } from "./components/TabStrip";
 import { Toolbar } from "./components/Toolbar";
+import { TurboNote } from "./components/TurboNote";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { bridge, type BrowserCommand, type ViewRect } from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
@@ -61,6 +62,7 @@ export function App() {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateOpen, setUpdateOpen] = useState(false);
+  const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
 
   const stageRef = useRef<HTMLElement>(null);
   const referenceRef = useRef<HTMLElement>(null);
@@ -614,6 +616,12 @@ export function App() {
       <TabStrip />
       <Toolbar
         onOpenPalette={() => setPaletteOpen(true)}
+        onOpenTurbo={(box) =>
+          setTurbo({
+            x: Math.min(Math.max(12, box.right - 328), window.innerWidth - 340),
+            y: box.bottom + 8,
+          })
+        }
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
       />
@@ -663,6 +671,7 @@ export function App() {
         />
       )}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
+      {turbo && <TurboNote x={turbo.x} y={turbo.y} onClose={() => setTurbo(null)} />}
     </div>
   );
 }

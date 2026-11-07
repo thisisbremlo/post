@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
@@ -69,7 +70,8 @@ export function ContextMenu({
   const left = Math.max(8, Math.min(x, window.innerWidth - width - 8));
   const top = Math.max(8, Math.min(y, window.innerHeight - height - 8));
 
-  return (
+  // Portalled to the body: inside the toolbar it would sit under the page.
+  return createPortal(
     <div
       ref={ref}
       className="menu"
@@ -97,6 +99,7 @@ export function ContextMenu({
           </button>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }

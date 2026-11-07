@@ -13,7 +13,7 @@ const PAGE_ICONS: Record<string, IconName> = {
   shelf: "sheets",
   history: "clock",
   sittings: "tab",
-  passwords: "key",
+  turbo: "zap",
   settings: "settings",
   updates: "export",
 };

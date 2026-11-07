@@ -2502,3 +2502,138 @@ svg {
     padding: 20px;
   }
 }
+
+/* A menu is a surface over the whole window, not a child of the toolbar. */
+.menu {
+  z-index: 900;
+}
+
+/* ---------- turbo notes ---------- */
+
+.turbo {
+  position: fixed;
+  z-index: 910;
+  display: flex;
+  flex-direction: column;
+  width: 328px;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  box-shadow: var(--shadow-float);
+  animation: dialog-in 160ms var(--ease) both;
+}
+
+.turbo-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.turbo-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  color: var(--ink-3);
+}
+
+.turbo-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+}
+
+.turbo-input::placeholder {
+  color: var(--ink-3);
+}
+
+.turbo-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.turbo-hint {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.turbo-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font-size: 11px;
+  transition: background-color 140ms var(--ease), color 140ms var(--ease);
+}
+
+.turbo-all:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+/* ---------- turbo page ---------- */
+
+.note-list {
+  margin: 8px 0 26px;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+}
+
+.note-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.note-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.note-time {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.note-delete {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  align-self: center;
+  opacity: 0;
+  transition: opacity 140ms var(--ease), background-color 140ms var(--ease),
+    color 140ms var(--ease);
+}
+
+.note-row:hover .note-delete,
+.note-delete:focus-visible {
+  opacity: 1;
+}
+
+.note-delete:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}

@@ -10,7 +10,7 @@ const {
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
-const { execFile, spawn } = require("node:child_process");
+const { spawn } = require("node:child_process");
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
 const PARTITION = "persist:scaffold";
@@ -660,19 +660,3 @@ async function installUpdate() {
 }
 
 ipcMain.handle("scaffold:install-update", () => installUpdate());
-
-/** Google Password Manager is Chrome's, so Post opens it rather than keeping a copy. */
-ipcMain.handle("scaffold:open-password-manager", async () => {
-  if (process.platform === "darwin") {
-    const candidates = [
-      "/Applications/Google Chrome.app",
-      path.join(app.getPath("home"), "Applications/Google Chrome.app"),
-    ];
-    if (candidates.some((candidate) => fs.existsSync(candidate))) {
-      execFile("open", ["-a", "Google Chrome", "chrome://password-manager/passwords"]);
-      return "chrome";
-    }
-  }
-  await shell.openExternal("https://passwords.google.com");
-  return "web";
-});
