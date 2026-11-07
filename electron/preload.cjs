@@ -9,6 +9,14 @@ contextBridge.exposeInMainWorld("scaffold", {
 
   openPasswordManager: () => ipcRenderer.invoke("scaffold:open-password-manager"),
 
+  installUpdate: () => ipcRenderer.invoke("scaffold:install-update"),
+
+  onInstallEvent: (handler) => {
+    const listener = (_event, payload) => handler(payload);
+    ipcRenderer.on("scaffold:install-event", listener);
+    return () => ipcRenderer.removeListener("scaffold:install-event", listener);
+  },
+
   syncLayout: (layout) => ipcRenderer.send("scaffold:sync-layout", layout),
   setOverlay: (open) => ipcRenderer.send("scaffold:overlay", Boolean(open)),
 

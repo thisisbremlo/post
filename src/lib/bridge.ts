@@ -48,6 +48,12 @@ export interface UpdateNotice {
   notes: string;
 }
 
+export interface InstallEvent {
+  state: "pulling" | "installing" | "building" | "ready" | "failed";
+  /** The last useful line of output, or why it stopped. */
+  line: string;
+}
+
 /**
  * The contract between the chrome renderer and the Electron shell.
  * Absent in the web preview harness, where pages fall back to a placeholder.
@@ -56,6 +62,9 @@ export interface ScaffoldBridge {
   platform: string;
   /** Opens Google Password Manager: Chrome's own page, or passwords.google.com. */
   openPasswordManager: () => Promise<"chrome" | "web">;
+  /** Pulls, rebuilds and replaces this app from the checkout it was built in. */
+  installUpdate: () => Promise<"started" | "manual">;
+  onInstallEvent: (handler: (event: InstallEvent) => void) => () => void;
   syncLayout: (layout: LayoutSync) => void;
   /** Modal overlays must lift the native page views or they cover them. */
   setOverlay: (open: boolean) => void;

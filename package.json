@@ -14,9 +14,9 @@
     "typecheck": "tsc --noEmit",
     "desktop": "npm run build && electron .",
     "desktop:dev": "VITE_DEV_SERVER_URL=http://localhost:3000 electron .",
-    "package": "npm run build && electron-builder",
-    "package:mac": "npm run build && electron-builder --mac",
-    "package:dir": "npm run build && electron-builder --dir",
+    "package": "node scripts/bake-checkout.mjs && npm run build && electron-builder",
+    "package:mac": "node scripts/bake-checkout.mjs && npm run build && electron-builder --mac",
+    "package:dir": "node scripts/bake-checkout.mjs && npm run build && electron-builder --dir",
     "stamp": "node scripts/stamp-update.mjs"
   },
   "build": {

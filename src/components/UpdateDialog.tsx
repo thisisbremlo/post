@@ -9,6 +9,8 @@ const PULL = "git pull && npm install";
 /** What Chrome's "update ready · relaunch" bubble would say if it were honest. */
 export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [stage, setStage] = useState<"idle" | "running" | "failed" | "ready" | "manual">("idle");
+  const [line, setLine] = useState("");
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -18,6 +20,17 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  // The shell reports pull, install and build as they happen, then the swap.
+  useEffect(() => {
+    if (!bridge) return;
+    return bridge.onInstallEvent((event) => {
+      setLine(event.line);
+      if (event.state === "failed") setStage("failed");
+      else if (event.state === "ready") setStage("ready");
+      else setStage("running");
+    });
+  }, []);
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(PULL);
@@ -26,6 +39,23 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
       setCopied(false);
     }
   };
+
+  const install = async () => {
+    if (!bridge) return;
+    setStage("running");
+    setLine("starting…");
+    try {
+      if ((await bridge.installUpdate()) === "manual") {
+        setStage("manual");
+        setLine("this copy was not packaged from a checkout, so it pulls itself");
+      }
+    } catch {
+      setStage("manual");
+      setLine("couldn't start the installer");
+    }
+  };
+
+  const working = stage === "running";
 
   return (
     <div
@@ -46,8 +76,9 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
           ) : (
             <>This build is older than the published Post {update.version} on main.</>
           )}{" "}
-          Pull it, then relaunch. Nothing of yours moves — the shelf, the groups and the sittings
-          live on this machine.
+          {bridge
+            ? "Install it and Post pulls, rebuilds, replaces this copy and reopens. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."
+            : "Pull it, then relaunch. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."}
         </p>
 
         <div className="update-cmd">
@@ -63,21 +94,25 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
           </button>
         </div>
 
+        {(stage !== "idle" || line) && (
+          <p className={"update-progress tnum" + (stage === "failed" ? " is-failed" : "")}>
+            {line}
+          </p>
+        )}
+
         <div className="update-foot">
           <button type="button" className="text-action" onClick={onClose}>
-            later
+            {stage === "ready" ? "close" : "later"}
           </button>
           {bridge ? (
             <button
               type="button"
               className="update-go"
-              onClick={() => {
-                onClose();
-                bridge!.relaunch();
-              }}
+              disabled={working || stage === "ready"}
+              onClick={() => void install()}
             >
-              relaunch
-              <Icon name="reload" size={13} />
+              {working ? "installing…" : stage === "failed" ? "try again" : stage === "ready" ? "reopening…" : "install and relaunch"}
+              {!working && stage !== "ready" && <Icon name="export" size={13} />}
             </button>
           ) : (
             <a

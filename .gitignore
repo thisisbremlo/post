@@ -8,3 +8,5 @@ release
 .DS_Store
 # review screenshots stay local, so a clone is just the app
 artifacts/
+# the installer needs the path of the machine that packaged the app, not a repo fact
+electron/checkout.json

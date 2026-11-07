@@ -10,7 +10,7 @@ const {
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
-const { execFile } = require("node:child_process");
+const { execFile, spawn } = require("node:child_process");
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
 const PARTITION = "persist:scaffold";
@@ -480,6 +480,104 @@ ipcMain.on("scaffold:view-action", (_event, { tabId, action }) => {
   if (action === "forward" && contents.canGoForward()) contents.goForward();
   if (action === "reload") contents.reload();
 });
+
+/* --------------------------------------------------------- install an update */
+
+/**
+ * Packaging bakes the checkout that produced this app (scripts/bake-checkout.mjs),
+ * which is what lets a packaged copy pull, rebuild and replace itself instead of
+ * asking its owner to run three commands by hand. A clone without that file, or
+ * a build that was never packaged, gets the manual route.
+ */
+let checkoutPath = "";
+try {
+  const baked = JSON.parse(fs.readFileSync(path.join(__dirname, "checkout.json"), "utf8"));
+  if (typeof baked.path === "string") checkoutPath = baked.path;
+} catch {
+  /* not packaged from a checkout */
+}
+
+const installedBundle = () => {
+  if (!app.isPackaged) return "";
+  const bundle = path.resolve(app.getAppPath(), "..", "..", "..");
+  return bundle.endsWith(".app") && fs.existsSync(bundle) ? bundle : "";
+};
+
+const tellInstall = (state, line) =>
+  chromeView?.webContents.send("scaffold:install-event", { state, line });
+
+/** One shell step at a time, reporting the last line so the dialog can breathe. */
+function runStep(command) {
+  return new Promise((resolve) => {
+    const child = spawn("/bin/zsh", ["-lc", command], { cwd: checkoutPath });
+    let tail = "";
+    const take = (chunk) => {
+      const line = String(chunk).trim().split("\n").filter(Boolean).pop();
+      if (!line) return;
+      tail = line;
+      tellInstall("building", tail);
+    };
+    child.stdout.on("data", take);
+    child.stderr.on("data", take);
+    child.on("close", (code) => resolve({ code, tail }));
+    child.on("error", (error) => resolve({ code: -1, tail: error.message }));
+  });
+}
+
+async function installUpdate() {
+  const bundle = installedBundle();
+  const checkoutExists = checkoutPath && fs.existsSync(path.join(checkoutPath, "package.json"));
+  if (!bundle || !checkoutExists) return "manual";
+
+  const steps = [
+    ["pulling", "git pull --ff-only"],
+    ["installing", "npm install"],
+    ["building", "npm run package:mac"],
+  ];
+
+  for (const [state, command] of steps) {
+    tellInstall(state, command);
+    const result = await runStep(command);
+    if (result.code !== 0) {
+      tellInstall("failed", result.tail || `${command} stopped with ${result.code}`);
+      return "started";
+    }
+  }
+
+  const built = ["release/mac-arm64/Post.app", "release/mac/Post.app", "release/mac-universal/Post.app"]
+    .map((candidate) => path.join(checkoutPath, candidate))
+    .find((candidate) => fs.existsSync(candidate));
+
+  if (!built) {
+    tellInstall("failed", "electron-builder left no Post.app to swap in");
+    return "started";
+  }
+
+  // The swap waits for this process to exit; the app quits, the copy is replaced.
+  const swapper = path.join(app.getPath("temp"), `post-swap-${Date.now()}.sh`);
+  fs.writeFileSync(
+    swapper,
+    [
+      "#!/bin/zsh",
+      `while kill -0 ${process.pid} 2>/dev/null; do sleep 0.3; done`,
+      `rm -rf "${bundle}.incoming"`,
+      `ditto "${built}" "${bundle}.incoming"`,
+      `rm -rf "${bundle}"`,
+      `mv "${bundle}.incoming" "${bundle}"`,
+      `open "${bundle}"`,
+      `rm -f "${swapper}"`,
+      "",
+    ].join("\n"),
+    { mode: 0o700 },
+  );
+  spawn("/bin/zsh", [swapper], { detached: true, stdio: "ignore" }).unref();
+
+  tellInstall("ready", "reopening on the new build");
+  setTimeout(() => app.exit(0), 900);
+  return "started";
+}
+
+ipcMain.handle("scaffold:install-update", () => installUpdate());
 
 /** Google Password Manager is Chrome's, so Post opens it rather than keeping a copy. */
 ipcMain.handle("scaffold:open-password-manager", async () => {

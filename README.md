@@ -87,9 +87,13 @@ the one-line note; the harness asks the same files over the public API. Every co
 therefore visible, whether or not the version moved. `npm run stamp` refreshes
 `update.json`; `SCAFFOLD_VERSION=0.2.0 npm run dev` pretends to be an older build when
 you want to see the chip.
-When main has moved past the running build, a small `update` chip appears in the
-toolbar; it says which build is on main, gives the pull command, and offers to
-relaunch. Nothing installs behind your back, and nothing of yours moves.
+When main has moved past the running build, the dialog opens once per commit and a
+small `update` chip stays in the toolbar for reopening it. In the packaged app the
+button pulls, installs, rebuilds, swaps the `.app` and reopens on the new copy;
+packaging bakes the checkout path into `electron/checkout.json` (not in git) so the
+app knows where to build from, and reports each step in the dialog. In the harness,
+or in a build that was never packaged, the dialog keeps the pull command instead.
+Nothing installs behind your back, and nothing of yours moves.
 
 Tab groups: drag one tab onto another and both land in a tinted group named after the
 target's domain. Click the group's chip to fold it away, double-click to rename it, the
@@ -124,7 +128,9 @@ is the next move, and it is weeks-per-release work, not a weekend.
 
 ## Not built yet
 
-- Favicons, tab drag-reorder, downloads, find-in-page, packaging and signing.
+- Tab drag-reorder, find-in-page, code signing and notarisation. The app is unsigned,
+  so a downloaded copy needs Gatekeeper's approval, and self-install builds from the
+  local checkout rather than a signed release feed.
 - The passwords page hands off to Chrome's own manager on macOS; the shell handler is
   checked for syntax and reviewed, but this environment has no display, so the handoff
   itself is unverified here.
