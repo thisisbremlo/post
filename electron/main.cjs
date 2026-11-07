@@ -218,12 +218,12 @@ function bindView(view, tabId) {
     Menu.buildFromTemplate(template).popup();
   });
 
-  // Scaffold sends a plain Chrome user agent; sites treat Electron differently.
+  // Post sends a plain Chrome user agent; sites treat Electron differently.
   contents.setUserAgent(
     contents
       .getUserAgent()
       .replace(/ Electron\/[\d.]+/, "")
-      .replace(/ Scaffold\/[\d.]+/, ""),
+      .replace(/ Post\/[\d.]+/, ""),
   );
 }
 
@@ -385,7 +385,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 560,
     backgroundColor: "#f6f2ea",
-    title: "Scaffold",
+    title: "Post",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
   });
 

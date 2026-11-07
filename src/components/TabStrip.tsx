@@ -219,7 +219,7 @@ export function TabStrip() {
       </button>
       {visible.length === 0 && <span className="tabstrip-empty">no pages open</span>}
       <span className="tabstrip-gap" aria-hidden="true" />
-      <span className="wordmark">Scaffold</span>
+      <span className="wordmark">Post</span>
     </div>
   );
 }

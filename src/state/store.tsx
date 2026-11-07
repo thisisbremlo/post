@@ -328,7 +328,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
       const tab = state.tabs.find((item) => item.id === action.tabId);
       if (!tab) return state;
       if (internalPageOf(tab.url)) {
-        return { ...state, notice: "Scaffold's own pages stay out of the shelf" };
+        return { ...state, notice: "Post's own pages stay out of the shelf" };
       }
       const existing = state.shelf.find((page) => page.url === tab.url);
       const shelf = existing
@@ -358,7 +358,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
     case "keep-clip": {
       if (!action.url) return state;
       if (internalPageOf(action.url)) {
-        return { ...state, notice: "Scaffold's own pages stay out of the shelf" };
+        return { ...state, notice: "Post's own pages stay out of the shelf" };
       }
       const note = action.note.trim();
       const existing = state.shelf.find((page) => page.url === action.url);

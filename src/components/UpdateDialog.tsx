@@ -36,7 +36,7 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
     >
       <div className="keep update" role="dialog" aria-modal="true" aria-label="an update is ready">
         <p className="update-kicker tnum">
-          Scaffold {update.version}
+          Post {update.version}
           {update.notes ? ` · ${update.notes}` : ""}
         </p>
         <p className="update-title">A newer build is on main</p>

@@ -1,4 +1,4 @@
-# Scaffold
+# Post
 
 A browser for building on other people's work. Pages you find stay findable: kept
 with a reason, held beside the page you are making, and never sent anywhere.

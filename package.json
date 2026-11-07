@@ -1,6 +1,6 @@
 {
-  "name": "scaffold",
-  "productName": "Scaffold",
+  "name": "post",
+  "productName": "Post",
   "version": "0.2.0",
   "private": true,
   "type": "module",

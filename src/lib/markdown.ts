@@ -12,7 +12,7 @@ function escapeMarkdown(value: string): string {
 export function shelfToMarkdown(pages: KeptPage[]): string {
   const sorted = [...pages].sort((a, b) => b.keptAt - a.keptAt);
   const lines: string[] = [
-    "# Scaffold shelf",
+    "# Post shelf",
     "",
     `${sorted.length} ${sorted.length === 1 ? "page" : "pages"} kept, exported ${shortDate(Date.now())}`,
     "",

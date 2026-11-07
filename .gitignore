@@ -6,3 +6,5 @@ release
 .env
 .env.local
 .DS_Store
+# review screenshots stay local, so a clone is just the app
+artifacts/

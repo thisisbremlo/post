@@ -87,16 +87,6 @@ export function Toolbar({
       <button
         type="button"
         className="icon-btn"
-        aria-label="keep this page"
-        title="keep this page (⌘D)"
-        onClick={() => window.dispatchEvent(new CustomEvent("scaffold:keep"))}
-      >
-        <Icon name="bookmark" size={16} />
-      </button>
-
-      <button
-        type="button"
-        className="icon-btn"
         aria-label="passwords"
         title="passwords"
         onClick={() => dispatch({ type: "navigate", url: "scaffold://passwords" })}

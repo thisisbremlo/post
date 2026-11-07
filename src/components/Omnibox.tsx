@@ -111,6 +111,19 @@ export function Omnibox({ tab }: { tab: Tab }) {
       >
         <Icon name={copied ? "check" : "copy"} size={13} />
       </button>
+      {/* The shelf, one click from the address: the icon saves, the tag says how. */}
+      <button
+        type="button"
+        className="omnibox-save"
+        aria-label="keep this page on the shelf"
+        title="keep this page on the shelf (⌘D)"
+        onClick={() => window.dispatchEvent(new CustomEvent("scaffold:keep"))}
+      >
+        <Icon name="bookmark" size={13} />
+        <span className="omnibox-save-key tnum" aria-hidden="true">
+          ⌘D
+        </span>
+      </button>
     </div>
   );
 }
