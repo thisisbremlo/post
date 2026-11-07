@@ -16,17 +16,26 @@ a UI patch are minutes; the first one is not.
 
 ## 1. The base
 
+Use a Chromium checkout that keeps the Chrome Web Store. ungoogled-chromium removes the
+store by design, so it is not the base here unless `chromium-web-store` ships with the
+build. The short path is Chromium's own `src` checkout with `depot_tools`:
+
 ```bash
-mkdir -p ~/post-chromium && cd ~/post-chromium
-git clone https://github.com/ungoogled-software/ungoogled-chromium.git
-cd ungoogled-chromium
-python3 utils/downloads.py retrieve -p macos
-python3 utils/downloads.py unpack -p macos
+mkdir -p ~/chromium && cd ~/chromium
+fetch --nohooks chromium
+cd src
+./build/install-build-deps.sh
+gclient runhooks
 ```
 
-ungoogled-chromium documents the exact flags for its current release in
-`docs/building.md`; follow that file rather than any command copied from here, because
-the domain substitution and pruning steps move between releases.
+If you want ungoogled's privacy patches, apply the ones that remove telemetry, sync and
+RLZ — not the ones that remove the extension service. Their `docs/building.md` explains
+the current patch layout, and it moves between releases; follow that file rather than a
+command copied from here.
+
+The trade-off is real: the store is a Google service, so "no Google services" and
+"install from the Chrome Web Store" cannot both be absolute. The brief asks for the
+store, so the store stays.
 
 ## 2. Post's overlay
 

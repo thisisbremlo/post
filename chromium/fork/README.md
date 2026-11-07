@@ -44,12 +44,16 @@ over `BookmarkModel`, `HistoryService` and `ExtensionRegistry` — no new UI.
 # once, in the repo
 npm run fork:assets              # builds the desk into the overlay and writes the .grd
 
-# on the Mac, with depot_tools and a Chromium/ungoogled-chromium checkout
+# on the Mac, with depot_tools and a Chromium checkout that keeps the Web Store
 python3 chromium/fork/integrate.py --src ~/chromium/src
 cd ~/chromium/src
 gn gen out/Post --args='is_debug=false is_component_build=false symbol_level=1'
 autoninja -C out/Post chrome
 ```
+
+The base must not be ungoogled-chromium as-is: it removes the Web Store, and with it the
+extension installs this whole fork exists for. Use Chromium, or add
+`chromium-web-store` to an ungoogled build.
 
 `integrate.py` copies the overlay and edits exactly two existing files: it registers
 `PostUIConfig` in `chrome/browser/ui/webui/chrome_web_ui_configs.cc` and adds the overlay

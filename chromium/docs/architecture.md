@@ -44,11 +44,19 @@ extensions/browser/api             ← untouched
 content/                           ← untouched
 ```
 
-ungoogled-chromium is the base because it already removes Google's services, sync, RLZ
-and the Google API keys, and because it is built from a patch series that a downstream
-project can extend. The fork keeps the whole `//chrome` layer, so extensions, the Web
-Store, profiles, permissions, bookmarks, history and downloads are Chromium's own code —
-not a reimplementation.
+The base has to keep the Web Store. That is a correction to the first draft of this
+document: ungoogled-chromium deliberately removes the store service, so a fork on
+ungoogled fails the requirement that started the migration. The fork therefore bases on
+Chromium — `//chrome` intact, store service intact — and takes ungoogled's patches
+selectively where they remove telemetry, sync and RLZ without removing the store. The
+alternative, staying on ungoogled and shipping chromium-web-store as a bundled
+extension, works but adds a second extension manager and still talks to Google's CRX
+endpoint; it is a fallback, not the plan.
+
+The fork keeps the whole `//chrome` layer, so extensions, the Web Store, profiles,
+permissions, bookmarks, history and downloads are Chromium's own code — not a
+reimplementation. Keeping the store also means keeping Google's extension service as a
+network dependency; that is the price of the requirement, stated plainly.
 
 Post's interface is a Chromium **WebUI**: the same React desk, served from
 `chrome://post`, mounted into the frame where the toolbar and tab strip used to be drawn

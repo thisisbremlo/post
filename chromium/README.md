@@ -58,6 +58,11 @@ new-tab page and every asset it references.
   that is ESM while the manifest says `classic` all fail there, before any Post code runs.
 - **The desk opens but shows the demo ribbon**: the page is not running as the extension.
   Open it through `chrome-extension://<id>/index.html` or the new tab, not as a file.
+- **"Installation currently unavailable" on every Web Store page**: that is the base
+  browser, not Post. ungoogled-chromium removes the store on purpose. Set
+  `chrome://flags/#extension-mime-request-handling` to *Always prompt for install* and
+  install `chromium-web-store`, or use a Chromium build, where the store works as in
+  Chrome. The fork bases on Chromium for exactly this reason.
 - **Another extension owns the new tab** and hides Post's override; the action button and
   `post` in the address bar still open the desk.
 

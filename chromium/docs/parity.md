@@ -23,7 +23,7 @@ phase-0 desk today. **Fork** means it needs the `chrome/browser/ui` patch.
 | Zoom | `setZoomFactor` | `chrome.tabs.setZoom` / Chromium zoom | next |
 | Page meta sheet | `executeJavaScript` in the page | `chrome.scripting.executeScript` (needs host access) | next |
 | Extensions list | `session.loadExtension` | `chrome.management` | ported |
-| Install from Web Store | CRX download + unzip | Chromium installs it natively | Chromium-owned |
+| Install from Web Store | CRX download + unzip | Chromium installs it natively, if the base kept the store | Chromium-owned |
 | Update check / install | GitHub feed + DMG swap | feed kept; DMG install needs the fork's app bundle | fork |
 | Window controls, frame, menus | Electron `BaseWindow` | Chromium `Browser` + Post frame | fork |
 | Native page views | `WebContentsView` | Chromium renders tabs; the desk is chrome, not content | fork |
@@ -41,7 +41,13 @@ phase-0 desk today. **Fork** means it needs the `chrome/browser/ui` patch.
 ## Extensions: what "works" means
 
 Chromium's extension system is the backend, so the question is not whether an extension
-runs but which Chromium version it targets. The matrix to test on the Mac:
+runs but which Chromium version it targets. The base settles whether the store can
+install anything at all: ungoogled-chromium removes the store on purpose, so every store
+page there says "Installation currently unavailable" until `chromium-web-store` is
+installed and `chrome://flags/#extension-mime-request-handling` is set to *Always prompt
+for install*. That is the base, not Post. The fork therefore bases on Chromium.
+
+The matrix to test on the Mac:
 
 | extension | kind | what it proves |
 | --- | --- | --- |

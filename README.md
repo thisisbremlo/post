@@ -154,12 +154,14 @@ ungoogled-chromium. It does not use Google services, but it cannot remove their 
 from the binary. There is no Safe Browsing, no sync, no Web Store, and DRM video is
 not guaranteed.
 
-The engine path is ungoogled Chromium, and it is not CEF: CEF embeds Chromium's content
-layer, while `chrome.tabs`, `chrome.management` and the Web Store live in the browser
-layer above it, so a CEF shell could never run store extensions. `chromium/` is the new
-shell — the desk on `chrome.*`, working today as a real Chromium extension, with the
-frame replacement (`chrome://post` inside Chromium's own `Browser`) as the next
-milestone. It is weeks-per-release work, not a weekend.
+The engine path is Chromium, and it is not CEF: CEF embeds Chromium's content layer,
+while `chrome.tabs`, `chrome.management` and the Web Store live in the browser layer
+above it, so a CEF shell could never run store extensions. `chromium/` is the new shell —
+the desk on `chrome.*`, working today as a real Chromium extension, with the frame
+replacement (`chrome://post` inside Chromium's own `Browser`) as the next milestone. The
+base has to keep the store: ungoogled-chromium removes it, so the fork starts from
+Chromium and takes only the privacy patches that do not cost the store. It is
+weeks-per-release work, not a weekend.
 
 ## Not built yet
 

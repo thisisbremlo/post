@@ -110,6 +110,12 @@ console.log(`profile     ${profile}`);
 console.log(`extension   ${extensionId}`);
 console.log(`engine      ${found.label} (${found.binary})`);
 console.log("\nIf no desk appears, open chrome://extensions and read the error on Post.");
+if (/ungoogled/i.test(found.binary)) {
+  console.log("\nungoogled-chromium removes the Chrome Web Store by design, so store installs fail there.");
+  console.log("For store extensions: chrome://flags/#extension-mime-request-handling →");
+  console.log("'Always prompt for install', then install chromium-web-store. A Chromium build");
+  console.log("needs none of that.");
+}
 
 const child = spawn(found.binary, args, { stdio: "inherit" });
 child.on("error", (error) => {
