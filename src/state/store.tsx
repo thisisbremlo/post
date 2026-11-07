@@ -84,6 +84,9 @@ function initialState(): ScaffoldState {
 export type Action =
   | { type: "open-tab"; url: string; activate?: boolean }
   | { type: "close-tab"; id: string }
+  | { type: "duplicate-tab"; id: string }
+  | { type: "close-others"; id: string }
+  | { type: "close-after"; id: string }
   | { type: "activate-tab"; id: string }
   | { type: "navigate"; tabId?: string; url: string }
   | { type: "tab-title"; tabId: string; title: string }
@@ -133,6 +136,12 @@ function sameOrigin(from: string, to: string): boolean {
   }
 }
 
+function tidyTabs(state: ScaffoldState, tabs: Tab[], fallbackId: string): ScaffoldState {
+  const groups = state.groups.filter((group) => tabs.some((tab) => tab.groupId === group.id));
+  const activeId = tabs.some((tab) => tab.id === state.activeId) ? state.activeId : fallbackId;
+  return { ...state, tabs, groups, activeId };
+}
+
 export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
   switch (action.type) {
     case "open-tab": {
@@ -175,6 +184,29 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         tabs.some((tab) => tab.groupId === group.id),
       );
       return { ...state, tabs, activeId, groups };
+    }
+
+    // The copy lands beside the original, inside the same group, and takes focus.
+    case "duplicate-tab": {
+      const index = state.tabs.findIndex((tab) => tab.id === action.id);
+      if (index === -1) return state;
+      const source = state.tabs[index];
+      const copy: Tab = { ...source, id: uid(), reloadKey: source.reloadKey + 1 };
+      const tabs = [...state.tabs];
+      tabs.splice(index + 1, 0, copy);
+      return { ...state, tabs, activeId: copy.id, notice: "tab duplicated" };
+    }
+
+    case "close-others": {
+      const tabs = state.tabs.filter((tab) => tab.id === action.id);
+      return tabs.length === state.tabs.length ? state : tidyTabs(state, tabs, action.id);
+    }
+
+    case "close-after": {
+      const index = state.tabs.findIndex((tab) => tab.id === action.id);
+      if (index === -1) return state;
+      const tabs = state.tabs.slice(0, index + 1);
+      return tabs.length === state.tabs.length ? state : tidyTabs(state, tabs, action.id);
     }
 
     case "activate-tab":

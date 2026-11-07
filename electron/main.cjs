@@ -493,6 +493,56 @@ ipcMain.on("scaffold:navigate", (_event, { tabId, url }) => {
   entry.view.webContents.loadURL(url).catch(() => undefined);
 });
 
+/*
+ * What a page says about itself, read inside its own view. The chrome cannot
+ * see the page's DOM, so this is the one place metadata can come from; it is a
+ * read, never an injection, and a page that refuses returns null.
+ */
+const META_SCRIPT = `(() => {
+  const clean = (value) => (value || "").trim();
+  const metas = Array.from(document.querySelectorAll("meta")).map((node) => ({
+    key: node.getAttribute("property") || node.getAttribute("name") || node.getAttribute("itemprop") || "",
+    content: clean(node.getAttribute("content")),
+  })).filter((entry) => entry.key && entry.content);
+  const links = Array.from(document.querySelectorAll("link[rel]")).map((node) => ({
+    rel: Array.from(node.relList || []).map((value) => value.toLowerCase()).join(" "),
+    href: node.href || "",
+  })).filter((entry) => entry.href);
+  const find = (key) => metas.find((entry) => entry.key.toLowerCase() === key)?.content || "";
+  const openGraph = {};
+  const twitter = {};
+  for (const entry of metas) {
+    const key = entry.key.toLowerCase();
+    if (key.startsWith("og:")) openGraph[key.slice(3)] = entry.content;
+    else if (key.startsWith("twitter:")) twitter[key.slice(8)] = entry.content;
+  }
+  const jsonLd = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+    .map((node) => { try { return JSON.parse(node.textContent || "null"); } catch { return null; } })
+    .filter(Boolean);
+  return {
+    title: clean(document.title),
+    description: find("description"),
+    canonical: links.find((entry) => entry.rel.split(" ").includes("canonical"))?.href || "",
+    lang: document.documentElement.lang || "",
+    themeColor: find("theme-color"),
+    openGraph,
+    twitter,
+    jsonLd,
+    metas,
+    links,
+  };
+})()`;
+
+ipcMain.handle("scaffold:read-page-meta", async (_event, { tabId } = {}) => {
+  const entry = pageViews.get(tabId);
+  if (!entry || entry.view.webContents.isDestroyed()) return null;
+  try {
+    return await entry.view.webContents.executeJavaScript(META_SCRIPT, true);
+  } catch {
+    return null;
+  }
+});
+
 ipcMain.on("scaffold:relaunch", () => {
   app.relaunch();
   app.exit(0);

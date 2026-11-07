@@ -43,6 +43,19 @@ export interface NativeViewEvent {
   note?: string;
 }
 
+export interface PageMeta {
+  title: string;
+  description: string;
+  canonical: string;
+  lang: string;
+  themeColor: string;
+  openGraph: Record<string, string>;
+  twitter: Record<string, string>;
+  jsonLd: unknown[];
+  metas: { key: string; content: string }[];
+  links: { rel: string; href: string }[];
+}
+
 export interface ChangelogEntry {
   sha: string;
   /** The commit subject: the changelog line as it was written on push. */
@@ -76,6 +89,8 @@ export interface ScaffoldBridge {
   /** Modal overlays must lift the native page views or they cover them. */
   setOverlay: (open: boolean) => void;
   navigate: (tabId: string, url: string) => void;
+  /** Reads the page's own account of itself; null on Post's pages and on failure. */
+  readPageMeta: (tabId: string) => Promise<PageMeta | null>;
   /** Chrome's own update button: quit and come back on the pulled build. */
   relaunch: () => void;
   closeTab: (tabId: string) => void;

@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("scaffold", {
   setOverlay: (open) => ipcRenderer.send("scaffold:overlay", Boolean(open)),
 
   navigate: (tabId, url) => ipcRenderer.send("scaffold:navigate", { tabId, url }),
+  /** What the page declares about itself: description, social card, JSON-LD. */
+  readPageMeta: (tabId) => ipcRenderer.invoke("scaffold:read-page-meta", { tabId }),
   relaunch: () => ipcRenderer.send("scaffold:relaunch"),
   closeTab: (tabId) => ipcRenderer.send("scaffold:close-tab", { tabId }),
   viewAction: (tabId, action) => ipcRenderer.send("scaffold:view-action", { tabId, action }),

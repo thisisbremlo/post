@@ -13,6 +13,7 @@ import {
   Files,
   Globe,
   Home,
+  Info,
   KeyRound,
   Image,
   Library,
@@ -70,7 +71,8 @@ export type IconName =
   | "quote"
   | "image"
   | "video"
-  | "link";
+  | "link"
+  | "info";
 
 /** One set, one weight. The names are ours; the drawings are Lucide's. */
 const ICONS: Record<IconName, LucideIcon> = {
@@ -85,6 +87,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   export: Download,
   search: Search,
   more: MoreHorizontal,
+  info: Info,
   settings: SlidersHorizontal,
   zap: Zap,
   "arrow-up-right": ArrowUpRight,

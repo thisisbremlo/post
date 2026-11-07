@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ContextMenu } from "./components/ContextMenu";
 import type { MenuItem } from "./components/ContextMenu";
 import { KeepDialog } from "./components/KeepDialog";
+import { MetaSheet } from "./components/MetaSheet";
 import { Palette } from "./components/Palette";
 import { PageView } from "./components/PageView";
 import { ReferencePane } from "./components/ReferencePane";
@@ -11,7 +12,7 @@ import { TabStrip } from "./components/TabStrip";
 import { Toolbar } from "./components/Toolbar";
 import { TurboNote } from "./components/TurboNote";
 import { UpdateDialog } from "./components/UpdateDialog";
-import { bridge, type BrowserCommand, type ViewRect } from "./lib/bridge";
+import { bridge, type BrowserCommand, type PageMeta, type ViewRect } from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
 import { fileStamp } from "./lib/time";
 import { checkForUpdate, updateFromCommit, type UpdateInfo } from "./lib/updates";
@@ -53,6 +54,18 @@ interface Clip {
   linkURL?: string;
 }
 
+/** A citation is what you paste into a brief: who, what, where. */
+function citationOf(meta: PageMeta, url: string): string | null {
+  const lines = [meta.title, meta.description].filter(Boolean);
+  return lines.length > 0 ? `${lines.join("\n")}\n${url}` : null;
+}
+
+/** The fields a link preview is built from, in one payload. */
+function socialCardOf(meta: PageMeta): string | null {
+  const card = { ...meta.openGraph, ...meta.twitter };
+  return Object.keys(card).length > 0 ? JSON.stringify(card, null, 2) : null;
+}
+
 export function App() {
   const { state, dispatch } = useStore();
   const activeTab = useActiveTab();
@@ -63,6 +76,7 @@ export function App() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
+  const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
 
   const stageRef = useRef<HTMLElement>(null);
   const referenceRef = useRef<HTMLElement>(null);
@@ -159,6 +173,7 @@ export function App() {
         setKeepOpen(false);
         setMenu(null);
         setUpdateOpen(false);
+        setMetaSheet(null);
         return;
       }
       if (!mod) return;
@@ -255,6 +270,53 @@ export function App() {
         dispatch({ type: "notice", text: "couldn't copy — select the address instead" });
       }
       setMenu(null);
+    };
+
+    const readMeta = async (tab: Tab): Promise<PageMeta | null> => {
+      if (!bridge || internalPageOf(tab.url)) return null;
+      return bridge.readPageMeta(tab.id);
+    };
+
+    const copyMeta = async (
+      tab: Tab,
+      build: (meta: PageMeta) => string | null,
+      done: string,
+      empty: string,
+    ) => {
+      const meta = await readMeta(tab);
+      if (!meta) {
+        dispatch({ type: "notice", text: "no page to read" });
+        return;
+      }
+      const text = build(meta);
+      if (!text) {
+        dispatch({ type: "notice", text: empty });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        dispatch({ type: "notice", text: done });
+      } catch {
+        dispatch({ type: "notice", text: "couldn't copy — select it on the page instead" });
+      }
+    };
+
+    const keepWithDescription = async (tab: Tab) => {
+      const meta = await readMeta(tab);
+      if (!meta?.description) {
+        dispatch({ type: "notice", text: "this page has no description to keep" });
+        return;
+      }
+      dispatch({ type: "keep", tabId: tab.id, note: meta.description });
+    };
+
+    const openMeta = async (tab: Tab) => {
+      const meta = await readMeta(tab);
+      if (!meta) {
+        dispatch({ type: "notice", text: "nothing to read on this page" });
+        return;
+      }
+      setMetaSheet({ meta, tab });
     };
 
     const pageItems = (tab: Tab, extra?: Clip): MenuItem[] => {
@@ -443,6 +505,108 @@ export function App() {
       },
     ];
 
+    /*
+     * A tab is a thing you arrange, not only a page you read, so its menu is
+     * about the tab first — duplicate, clear the neighbours — then the page's
+     * own words: description, card, citation, and the sheet with all of it.
+     */
+    const tabItems = (tab: Tab): MenuItem[] => {
+      const current = stateRef.current;
+      const index = current.tabs.findIndex((item) => item.id === tab.id);
+      const items: MenuItem[] = [
+        {
+          id: "duplicate",
+          label: "duplicate tab",
+          icon: "copy",
+          onSelect: () => dispatch({ type: "duplicate-tab", id: tab.id }),
+        },
+      ];
+
+      if (current.tabs.length > 1) {
+        items.push({
+          id: "close-others",
+          label: "close the other tabs",
+          icon: "tab",
+          onSelect: () => dispatch({ type: "close-others", id: tab.id }),
+        });
+      }
+
+      if (index > -1 && index < current.tabs.length - 1) {
+        items.push({
+          id: "close-after",
+          label: "close the tabs to the right",
+          icon: "ungroup",
+          onSelect: () => dispatch({ type: "close-after", id: tab.id }),
+        });
+      }
+
+      items.push({
+        id: "copy",
+        label: "copy address",
+        icon: "link",
+        onSelect: () => void copyAddress(tab.url),
+      });
+
+      // Metadata lives in the page's DOM, which only the native shell can read.
+      if (bridge && internalPageOf(tab.url) === null) {
+        items.push({
+          id: "keep-with-description",
+          label: "keep with its description",
+          icon: "bookmark",
+          separatorBefore: true,
+          onSelect: () => void keepWithDescription(tab),
+        });
+        items.push({
+          id: "copy-description",
+          label: "copy the description",
+          icon: "quote",
+          onSelect: () =>
+            void copyMeta(
+              tab,
+              (meta) => meta.description || null,
+              "description copied",
+              "this page has no description",
+            ),
+        });
+        items.push({
+          id: "copy-card",
+          label: "copy the social card",
+          icon: "globe",
+          onSelect: () => void copyMeta(tab, socialCardOf, "social card copied", "this page has no social card"),
+        });
+        items.push({
+          id: "copy-citation",
+          label: "copy a citation",
+          icon: "copy",
+          onSelect: () =>
+            void copyMeta(
+              tab,
+              (meta) => citationOf(meta, tab.url),
+              "citation copied",
+              "this page has nothing to cite",
+            ),
+        });
+        items.push({
+          id: "details",
+          label: "page details",
+          icon: "info",
+          onSelect: () => void openMeta(tab),
+        });
+      }
+
+      items.push({
+        id: "close",
+        label: "close tab",
+        icon: "close",
+        hint: "⌘W",
+        danger: true,
+        separatorBefore: true,
+        onSelect: () => dispatch({ type: "close-tab", id: tab.id }),
+      });
+
+      return items;
+    };
+
     const onContextMenu = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
@@ -457,7 +621,7 @@ export function App() {
 
       if (tabEl) {
         const tab = current.tabs.find((item) => item.id === tabEl.dataset.tabId);
-        if (tab) items = pageItems(tab);
+        if (tab) items = tabItems(tab);
       } else if (cardEl) {
         const card = current.shelf.find((page) => page.id === cardEl.dataset.cardId);
         if (card) items = cardItems(card);
@@ -565,8 +729,8 @@ export function App() {
 
   // Native views sit above the chrome, so a modal must lift them out of the way.
   useEffect(() => {
-    bridge?.setOverlay(keepOpen || paletteOpen || updateOpen);
-  }, [keepOpen, paletteOpen, updateOpen]);
+    bridge?.setOverlay(keepOpen || paletteOpen || updateOpen || metaSheet !== null);
+  }, [keepOpen, paletteOpen, updateOpen, metaSheet]);
 
   useEffect(() => {
     if (!bridge) return;
@@ -675,6 +839,13 @@ export function App() {
       )}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
       {turbo && <TurboNote x={turbo.x} y={turbo.y} onClose={() => setTurbo(null)} />}
+      {metaSheet && (
+        <MetaSheet
+          tab={metaSheet.tab}
+          meta={metaSheet.meta}
+          onClose={() => setMetaSheet(null)}
+        />
+      )}
     </div>
   );
 }
