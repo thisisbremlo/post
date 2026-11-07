@@ -5,6 +5,7 @@ import { internalPageOf } from "../lib/url";
 import { useStore } from "../state/store";
 import type { Tab, TabGroup } from "../state/types";
 import { Icon } from "./Icon";
+import { Mark } from "./Mark";
 import type { IconName } from "./Icon";
 
 const PAGE_ICONS: Record<string, IconName> = {
@@ -219,7 +220,10 @@ export function TabStrip() {
       </button>
       {visible.length === 0 && <span className="tabstrip-empty">no pages open</span>}
       <span className="tabstrip-gap" aria-hidden="true" />
-      <span className="wordmark">Post</span>
+      <span className="wordmark">
+        <Mark size={12} />
+        Post
+      </span>
     </div>
   );
 }

@@ -445,6 +445,9 @@ svg {
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   align-self: center;
   flex: none;
   padding: 0 6px 0 10px;

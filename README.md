@@ -1,3 +1,5 @@
+<img src="build/icon.png" width="72" alt="Post" />
+
 # Post
 
 A browser for building on other people's work. Pages you find stay findable: kept
