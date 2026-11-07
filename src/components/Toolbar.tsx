@@ -121,8 +121,8 @@ export function Toolbar({
         <button
           type="button"
           className="update-chip"
-          aria-label={`update to ${update.version}`}
-          title={`Scaffold ${update.version} is on main — pull it and relaunch`}
+          aria-label="an update is ready"
+          title={`main is newer${update.commit ? ` (${update.commit})` : ""} — pull it and relaunch`}
           onClick={onOpenUpdate}
         >
           <Icon name="export" size={13} />

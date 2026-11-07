@@ -36,13 +36,14 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
     >
       <div className="keep update" role="dialog" aria-modal="true" aria-label="an update is ready">
         <p className="update-kicker tnum">
-          update · {update.commit}
+          Scaffold {update.version}
           {update.notes ? ` · ${update.notes}` : ""}
         </p>
-        <p className="update-title">Scaffold {update.version} is on main</p>
+        <p className="update-title">A newer build is on main</p>
         <p className="update-line">
-          A newer build has landed since this one. Pull it, then relaunch. Nothing of yours moves —
-          the shelf, the groups and the sittings live on this machine.
+          This build is from {update.from || "an older commit"}; main is{" "}
+          {update.commit ? `at ${update.commit}` : `on ${update.version}`}. Pull it, then relaunch.
+          Nothing of yours moves — the shelf, the groups and the sittings live on this machine.
         </p>
 
         <div className="update-cmd">

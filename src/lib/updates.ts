@@ -13,6 +13,8 @@ export interface UpdateInfo {
   version: string;
   /** Short sha of the tip of main. */
   commit: string;
+  /** Short sha this build came from, or empty when built outside git. */
+  from: string;
   /** First line of that commit's message, so the chip has a reason. */
   notes: string;
   url: string;
@@ -34,36 +36,49 @@ function newer(remote: string, local: string): boolean {
  */
 export async function checkForUpdate(signal?: AbortSignal): Promise<UpdateInfo | null> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
+  const patience = signal ?? AbortSignal.timeout(8000);
   try {
-    const head = await fetch(`${API}/commits/main`, {
-      headers: { accept: "application/vnd.github+json" },
-      cache: "no-store",
-      signal: signal ?? AbortSignal.timeout(8000),
-    });
-    if (!head.ok) return null;
-    const tip = (await head.json()) as {
-      sha?: string;
-      commit?: { message?: string };
-    };
-    const sha = tip.sha ?? "";
-    if (!sha || sha === APP_COMMIT) return null;
-
-    // A version from a machine without git still gets an answer.
+    // The version manifest is a plain file: no rate limit, no token, always there.
     const manifest = await fetch(`https://raw.githubusercontent.com/${REPO}/main/package.json`, {
       cache: "no-store",
-      signal: signal ?? AbortSignal.timeout(8000),
+      signal: patience,
     });
     const version = manifest.ok
-      ? ((((await manifest.json()) as { version?: string }).version ?? APP_VERSION) as string)
-      : APP_VERSION;
+      ? (((await manifest.json()) as { version?: string }).version ?? "")
+      : "";
 
-    if (!APP_COMMIT && !newer(version, APP_VERSION)) return null;
+    // The commit feed adds detail when GitHub answers; it is rate limited per IP,
+    // so a shared network must not be able to switch updates off.
+    let sha = "";
+    let notes = "";
+    try {
+      const head = await fetch(`${API}/commits/main`, {
+        headers: { accept: "application/vnd.github+json" },
+        cache: "no-store",
+        signal: patience,
+      });
+      if (head.ok) {
+        const tip = (await head.json()) as { sha?: string; commit?: { message?: string } };
+        sha = tip.sha ?? "";
+        notes = (tip.commit?.message ?? "").split("\n")[0] ?? "";
+      }
+    } catch {
+      /* the commit detail is a bonus, not the check */
+    }
+
+    const versionMoved = Boolean(version) && newer(version, APP_VERSION);
+    const commitMoved = Boolean(sha) && sha !== APP_COMMIT;
+    if (!versionMoved && !commitMoved) return null;
 
     return {
-      version,
+      version: version || APP_VERSION,
       commit: sha.slice(0, 7),
-      notes: (tip.commit?.message ?? "").split("\n")[0] ?? "",
-      url: `https://github.com/${REPO}/compare/${APP_COMMIT || `v${APP_VERSION}`}...${sha}`,
+      from: APP_COMMIT.slice(0, 7),
+      notes,
+      url:
+        sha && APP_COMMIT
+          ? `https://github.com/${REPO}/compare/${APP_COMMIT}...${sha}`
+          : `https://github.com/${REPO}`,
     };
   } catch {
     return null;

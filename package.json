@@ -1,7 +1,7 @@
 {
   "name": "scaffold",
   "productName": "Scaffold",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A browser for building on other people's work",
