@@ -12,6 +12,7 @@ const {
 const path = require("node:path");
 const fs = require("node:fs");
 const crypto = require("node:crypto");
+const { execFile } = require("node:child_process");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
@@ -226,6 +227,44 @@ function bindView(view, tabId) {
   );
 }
 
+/* ---------------------------------------------------------------- updates */
+
+const PROJECT_DIR = path.join(__dirname, "..");
+
+function git(args) {
+  return new Promise((resolve, reject) => {
+    execFile("git", args, { cwd: PROJECT_DIR, timeout: 20000 }, (error, stdout) => {
+      if (error) reject(error);
+      else resolve(stdout.trim());
+    });
+  });
+}
+
+/**
+ * A private repo cannot answer an unauthenticated HTTP check, but this checkout
+ * already knows how to talk to its own remote. Fetch quietly and tell the chrome
+ * what main is; the chrome compares that with the commit it was built from.
+ */
+async function checkForUpdates() {
+  try {
+    await git(["fetch", "--quiet", "--no-tags", "origin", "main"]);
+    const [sha, ...message] = (await git(["log", "-1", "--format=%H%n%s", "FETCH_HEAD"])).split("\n");
+    let version = "";
+    try {
+      version = JSON.parse(await git(["show", "FETCH_HEAD:package.json"])).version ?? "";
+    } catch {
+      /* an unreadable manifest is not a failed check */
+    }
+    chromeView?.webContents.send("scaffold:update", {
+      sha: sha ?? "",
+      version,
+      notes: message.join(" "),
+    });
+  } catch {
+    /* no git, no remote or no network: silently nothing new */
+  }
+}
+
 function attachPreload(view, tabId) {
   view.webContents.on("dom-ready", () => undefined);
   bindView(view, tabId);
@@ -399,6 +438,9 @@ app.whenReady().then(() => {
   session.fromPartition(PARTITION).setPermissionCheckHandler(() => false);
 
   createWindow();
+
+  setTimeout(checkForUpdates, 6000);
+  setInterval(checkForUpdates, 6 * 60 * 60 * 1000);
 
   app.on("activate", () => {
     if (!BaseWindow.getAllWindows().length) createWindow();

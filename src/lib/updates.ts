@@ -9,6 +9,8 @@ const API = `https://api.github.com/repos/${REPO}`;
 export const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "0.0.0";
 const APP_COMMIT = typeof __APP_COMMIT__ === "string" ? __APP_COMMIT__ : "";
 
+import type { UpdateNotice } from "./bridge";
+
 export interface UpdateInfo {
   version: string;
   /** Short sha of the tip of main. */
@@ -18,6 +20,20 @@ export interface UpdateInfo {
   /** First line of that commit's message, so the chip has a reason. */
   notes: string;
   url: string;
+}
+
+/** The shell's answer, compared with the commit this build was made from. */
+export function updateFromCommit(notice: UpdateNotice): UpdateInfo | null {
+  if (!notice.sha || notice.sha === APP_COMMIT) return null;
+  return {
+    version: notice.version || APP_VERSION,
+    commit: notice.sha.slice(0, 7),
+    from: APP_COMMIT.slice(0, 7),
+    notes: notice.notes,
+    url: APP_COMMIT
+      ? `https://github.com/${REPO}/compare/${APP_COMMIT}...${notice.sha}`
+      : `https://github.com/${REPO}`,
+  };
 }
 
 function newer(remote: string, local: string): boolean {

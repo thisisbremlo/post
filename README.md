@@ -59,6 +59,9 @@ with no easing, because nothing there should lag behind the pointer.
 
 Updates are Chrome's, minus the store: a build bakes the commit it came from, main is
 the release channel, and the app checks the tip of main at launch and every six hours.
+In the shell that check goes through the checkout's own git remote, which is what lets a
+private repo work without a token; the web harness asks the public feed and stays quiet
+when it cannot answer.
 When main has moved past the running build, a small `update` chip appears in the
 toolbar; it says which build is on main, gives the pull command, and offers to
 relaunch. Nothing installs behind your back, and nothing of yours moves.

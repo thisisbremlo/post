@@ -22,6 +22,12 @@ export interface NativeViewEvent {
   note?: string;
 }
 
+export interface UpdateNotice {
+  sha: string;
+  version: string;
+  notes: string;
+}
+
 export interface VaultEntry {
   id: string;
   origin: string;
@@ -46,6 +52,8 @@ export interface ScaffoldBridge {
   closeTab: (tabId: string) => void;
   viewAction: (tabId: string, action: "back" | "forward" | "reload") => void;
   onViewEvent: (handler: (event: NativeViewEvent) => void) => () => void;
+  /** The shell fetches main through the checkout's own remote; null means quiet. */
+  onUpdate: (handler: (notice: UpdateNotice | null) => void) => () => void;
   vault: {
     list: () => Promise<VaultEntry[]>;
     save: (entry: { origin: string; username: string; password: string }) => Promise<void>;

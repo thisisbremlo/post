@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld("scaffold", {
   closeTab: (tabId) => ipcRenderer.send("scaffold:close-tab", { tabId }),
   viewAction: (tabId, action) => ipcRenderer.send("scaffold:view-action", { tabId, action }),
 
+  onUpdate: (handler) => {
+    const listener = (_event, notice) => handler(notice);
+    ipcRenderer.on("scaffold:update", listener);
+    return () => ipcRenderer.removeListener("scaffold:update", listener);
+  },
+
   onViewEvent: (handler) => {
     const listener = (_event, payload) => handler(payload);
     ipcRenderer.on("scaffold:view-event", listener);

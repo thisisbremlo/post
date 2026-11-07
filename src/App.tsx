@@ -13,7 +13,7 @@ import { UpdateDialog } from "./components/UpdateDialog";
 import { bridge, type ViewRect } from "./lib/bridge";
 import { downloadMarkdown, shelfToMarkdown } from "./lib/markdown";
 import { fileStamp } from "./lib/time";
-import { checkForUpdate, type UpdateInfo } from "./lib/updates";
+import { checkForUpdate, updateFromCommit, type UpdateInfo } from "./lib/updates";
 import { internalPageOf, parseDomain } from "./lib/url";
 import { useActiveTab, useStore } from "./state/store";
 import type { KeptPage, Tab } from "./state/types";
@@ -76,8 +76,19 @@ export function App() {
     return () => window.removeEventListener("scaffold:keep", open);
   }, []);
 
+  // The shell reads main through the checkout's own git remote, so a private
+  // repo needs no token; the harness asks the public feed instead.
+  useEffect(() => {
+    if (!bridge) return;
+    return bridge.onUpdate((notice) => {
+      const found = notice ? updateFromCommit(notice) : null;
+      if (found) setUpdate(found);
+    });
+  }, []);
+
   // A browser looks for a newer build quietly and says so once, in a small chip.
   useEffect(() => {
+    if (bridge) return;
     let live = true;
     const look = () => {
       checkForUpdate().then((found) => {
