@@ -12,9 +12,9 @@ function additionsOf(update: UpdateInfo): string[] {
 }
 
 /**
- * The update site, set like a small black page: one narrow column, plain words,
- * the newest additions, and one quiet action. No versions to compare, no shas,
- * no diff — a designer does not need any of it.
+ * The update site, set like the reference: a large headline, a bordered panel of
+ * changes, filled actions, hairlines between sections. No versions to compare,
+ * no shas, no diff. The paper follows the system's light or dark setting.
  */
 export function UpdatesPage() {
   const [update, setUpdate] = useState<UpdateInfo | null>(latestUpdate());
@@ -41,64 +41,84 @@ export function UpdatesPage() {
 
   return (
     <div className="page updates">
-      <div className="updates-column">
+      <div className="updates-shell">
         <header className="updates-head">
-          <Mark size={20} />
+          <span className="updates-brand">
+            <Mark size={18} />
+            Post
+          </span>
           <span className="updates-where">updates</span>
         </header>
 
-        <p className="updates-name">(Post) updates</p>
-        <p className="updates-body">
-          The newest additions to Post, newest first. Installing reopens the app where you left
-          off; your tabs, shelf and settings stay where they are.
-        </p>
+        <div className="updates-hero">
+          <div className="updates-copy">
+            <p className="updates-kicker">release notes</p>
+            <h1 className="updates-title">What changed in Post.</h1>
+            <p className="updates-lede">
+              The newest additions, newest first. Installing reopens the app where you left off;
+              your tabs, shelf and settings stay where they are.
+            </p>
 
-        {additions.length > 0 ? (
-          <section className="updates-section">
-            <h1 className="updates-heading">Latest</h1>
-            <ul className="updates-list">
-              {additions.map((title, index) => (
-                <li key={`${index}-${title}`}>{title}</li>
-              ))}
-            </ul>
+            <div className="updates-actions">
+              {bridge ? (
+                <button
+                  type="button"
+                  className="updates-primary"
+                  disabled={busy || stage === "ready"}
+                  onClick={() => void install()}
+                >
+                  {busy ? "installing…" : stage === "failed" ? "try again" : "install and relaunch"}
+                </button>
+              ) : (
+                <span className="updates-quiet">This preview cannot update itself.</span>
+              )}
+            </div>
+
+            {busy && <p className="updates-status">Post reopens when it is done.</p>}
+            {stage === "ready" && <p className="updates-status">Reopening on the new build.</p>}
+
+            {stage === "failed" && (
+              <p className="updates-fail">
+                It stopped before it finished.
+                <button
+                  type="button"
+                  className="updates-secondary"
+                  onClick={() => void handOverLog()}
+                >
+                  {copied ? "log copied" : "copy the log"}
+                </button>
+              </p>
+            )}
+          </div>
+
+          <section className="updates-panel" aria-label="newest additions">
+            <p className="updates-label">{additions.length > 0 ? "Newest" : "Latest"}</p>
+            {additions.length > 0 ? (
+              <ol className="updates-list">
+                {additions.map((title, index) => (
+                  <li key={`${index}-${title}`}>
+                    <span className="updates-count tnum" aria-hidden="true">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span>{title}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="updates-empty">
+                This copy is level with the newest build. Nothing to read here until something
+                lands.
+              </p>
+            )}
           </section>
-        ) : (
-          <p className="updates-body updates-level">
-            This copy is level with the newest build. Nothing to read here until something lands.
-          </p>
-        )}
+        </div>
 
         <section className="updates-section">
           <h2 className="updates-heading">Installing</h2>
           <p className="updates-body">
-            Post rebuilds itself from the copy it was packaged from, then reopens. Nothing is sent
+            Post updates itself from the copy it was built from, then reopens. Nothing is sent
             anywhere, and no account is involved.
           </p>
-
-          {bridge ? (
-            <p className="updates-run">
-              <button
-                type="button"
-                className="updates-action"
-                disabled={busy || stage === "ready"}
-                onClick={() => void install()}
-              >
-                {busy ? "installing…" : stage === "failed" ? "try again" : "install and relaunch"}
-              </button>
-              {stage === "ready" && <span className="updates-quiet">reopening…</span>}
-            </p>
-          ) : (
-            <p className="updates-quiet">This preview cannot update itself.</p>
-          )}
-
-          {stage === "failed" && (
-            <p className="updates-fail">
-              It stopped before it finished.
-              <button type="button" className="updates-action" onClick={() => void handOverLog()}>
-                {copied ? "log copied" : "copy the log"}
-              </button>
-            </p>
-          )}
         </section>
 
         <footer className="updates-foot">

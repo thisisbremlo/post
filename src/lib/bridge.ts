@@ -83,7 +83,7 @@ export interface InstallEvent {
 export interface ScaffoldBridge {
   platform: string;
   /** Pulls, rebuilds and replaces this app from the checkout it was built in. */
-  installUpdate: () => Promise<"started" | "manual">;
+  installUpdate: () => Promise<"started" | "manual" | "failed">;
   onInstallEvent: (handler: (event: InstallEvent) => void) => () => void;
   syncLayout: (layout: LayoutSync) => void;
   /** Modal overlays must lift the native page views or they cover them. */

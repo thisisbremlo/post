@@ -15,9 +15,9 @@ function additionsOf(update: UpdateInfo): string[] {
 }
 
 /**
- * An update is a small interruption: what is new, one button, and a way out.
- * The technical narration only appears if the install stops, and only as a log
- * to copy for whoever fixes it.
+ * An update is a small interruption: a headline, what changed, one filled
+ * button, and a way out. The paper follows the system — light on a light Mac,
+ * near-black on a dark one — and the log only appears when the install stops.
  */
 export function UpdateDialog({
   update,
@@ -52,22 +52,38 @@ export function UpdateDialog({
       }}
     >
       <div className="release-note" role="dialog" aria-modal="true" aria-label="an update is ready">
-        <p className="release-note-kicker">update</p>
+        <div className="release-note-top">
+          <span className="release-note-kicker">update</span>
+          <button type="button" className="release-note-close" aria-label="close" onClick={onClose}>
+            <Icon name="close" size={14} />
+          </button>
+        </div>
+
         <h2 className="release-note-title">An update is ready.</h2>
         <p className="release-note-body">
-          Install it and Post comes back where you left off — your tabs, shelf and settings stay
-          put.
+          A newer build of Post is here. Installing reopens it where you left off — your tabs,
+          shelf and settings stay put.
         </p>
 
         {additions.length > 0 && (
-          <>
+          <div className="release-note-panel">
             <p className="release-note-label">Newest</p>
-            <ul className="release-note-list">
+            <ol className="release-note-list">
               {additions.map((title, index) => (
-                <li key={`${index}-${title}`}>{title}</li>
+                <li key={`${index}-${title}`}>
+                  <span className="release-note-count tnum" aria-hidden="true">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span>{title}</span>
+                </li>
               ))}
-            </ul>
-          </>
+            </ol>
+          </div>
+        )}
+
+        {busy && <p className="release-note-status">Installing. Post reopens when it is done.</p>}
+        {stage === "ready" && (
+          <p className="release-note-status">Reopening on the new build.</p>
         )}
 
         {stage === "failed" && (
@@ -94,11 +110,11 @@ export function UpdateDialog({
           ) : (
             <span className="release-note-quiet">This preview cannot update itself.</span>
           )}
-          <button type="button" className="release-note-quiet" onClick={onOpenUpdates}>
+          <button type="button" className="release-note-secondary" onClick={onOpenUpdates}>
             what changed
-            <Icon name="arrow-up-right" size={11} />
+            <Icon name="arrow-up-right" size={12} />
           </button>
-          <button type="button" className="release-note-quiet" onClick={onClose}>
+          <button type="button" className="release-note-later" onClick={onClose}>
             {stage === "ready" ? "close" : "later"}
           </button>
         </div>

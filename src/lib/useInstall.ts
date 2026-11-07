@@ -25,9 +25,12 @@ export function useInstall() {
 
   const install = async () => {
     if (!bridge) return;
+    setLog([]);
     setStage("running");
     try {
-      if ((await bridge.installUpdate()) === "manual") setStage("manual");
+      const result = await bridge.installUpdate();
+      if (result === "manual") setStage("manual");
+      else if (result === "failed") setStage("failed");
     } catch {
       setStage("failed");
     }

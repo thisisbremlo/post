@@ -575,6 +575,25 @@ try {
   /* not packaged from a checkout */
 }
 
+// Running the source directly: the current folder is the checkout.
+if (!app.isPackaged && !checkoutPath) checkoutPath = process.cwd();
+
+/** Why a bundle cannot replace itself, in words a person can act on. */
+function bundleProblem(bundle) {
+  if (bundle.includes("/AppTranslocation/")) {
+    return "Post is running from a downloaded image. Move it to Applications, then update.";
+  }
+  if (bundle.startsWith("/Volumes/")) {
+    return "Post is running from its disk image. Move it to Applications, then update.";
+  }
+  try {
+    fs.accessSync(path.dirname(bundle), fs.constants.W_OK);
+  } catch {
+    return "Post's folder is not writable. Move it to Applications, then update.";
+  }
+  return "";
+}
+
 const installedBundle = () => {
   if (!app.isPackaged) return "";
   const bundle = path.resolve(app.getAppPath(), "..", "..", "..");
@@ -612,28 +631,54 @@ const runQuiet = (command, args) =>
     child.on("error", () => resolve(-1));
   });
 
-/** Wait for this process to die, swap the bundle in its place, reopen it. */
+/**
+ * Wait for this process to die, swap the bundle in its place, reopen it. The
+ * old bundle is moved aside, never deleted first: if the new one cannot take its
+ * place, the old one goes back, so a failed update cannot leave no app at all.
+ */
 function swapIn(bundle, built, cleanup) {
+  if (!built || !fs.existsSync(built)) {
+    tellInstall("failed", "the new build is not on disk");
+    return false;
+  }
+
   const swapper = path.join(app.getPath("temp"), `post-swap-${Date.now()}.sh`);
-  fs.writeFileSync(
-    swapper,
-    [
-      "#!/bin/zsh",
-      `while kill -0 ${process.pid} 2>/dev/null; do sleep 0.3; done`,
-      `rm -rf "${bundle}.incoming"`,
-      `ditto "${built}" "${bundle}.incoming"`,
-      `rm -rf "${bundle}"`,
-      `mv "${bundle}.incoming" "${bundle}"`,
-      cleanup ? `rm -rf "${cleanup}"` : ":",
-      `open "${bundle}"`,
-      `rm -f "${swapper}"`,
-      "",
-    ].join("\n"),
-    { mode: 0o700 },
-  );
+  const script = [
+    "#!/bin/zsh",
+    `while kill -0 ${process.pid} 2>/dev/null; do sleep 0.3; done`,
+    `rm -rf "${bundle}.incoming" "${bundle}.old" "${bundle}.failed"`,
+    `ditto "${built}" "${bundle}.incoming" || exit 1`,
+    `mv "${bundle}" "${bundle}.old" || exit 1`,
+    `if ! mv "${bundle}.incoming" "${bundle}"; then`,
+    `  mv "${bundle}.old" "${bundle}"`,
+    "  exit 1",
+    "fi",
+    // The old bundle stays until the new one actually opens, so a bad build can
+    // never leave the Mac with no Post to open.
+    `if open "${bundle}"; then`,
+    `  rm -rf "${bundle}.old"`,
+    cleanup ? `  rm -rf "${cleanup}"` : "  :",
+    "else",
+    `  mv "${bundle}" "${bundle}.failed"`,
+    `  mv "${bundle}.old" "${bundle}"`,
+    `  open "${bundle}"`,
+    `  rm -rf "${bundle}.failed"`,
+    "fi",
+    `rm -f "${swapper}"`,
+    "",
+  ].join("\n");
+
+  try {
+    fs.writeFileSync(swapper, script, { mode: 0o700 });
+  } catch (error) {
+    tellInstall("failed", error.message);
+    return false;
+  }
+
   spawn("/bin/zsh", [swapper], { detached: true, stdio: "ignore" }).unref();
   tellInstall("ready", "reopening on the new build");
   setTimeout(() => app.exit(0), 900);
+  return true;
 }
 
 /**
@@ -673,14 +718,16 @@ async function fromRelease() {
 async function fromCheckout() {
   if (!checkoutPath || !fs.existsSync(path.join(checkoutPath, "package.json"))) return null;
 
+  // Each step says what it is doing in plain words; the raw command stays in the
+  // log, which is the only place it is useful.
   const steps = [
-    ["pulling", "git pull --ff-only"],
-    ["installing", "npm install"],
-    ["building", "npm run package:mac"],
+    ["pulling", "fetching the newest code", "git pull --ff-only"],
+    ["installing", "installing what the new build needs", "npm install"],
+    ["building", "rebuilding Post", "npm run package:mac"],
   ];
 
-  for (const [state, command] of steps) {
-    tellInstall(state, command);
+  for (const [state, label, command] of steps) {
+    tellInstall(state, label);
     const result = await runStep(command);
     if (result.code !== 0) return null;
   }
@@ -692,26 +739,63 @@ async function fromCheckout() {
   return built ?? null;
 }
 
+/**
+ * An unpackaged copy cannot replace a bundle, but it can update the checkout it
+ * runs from and reopen itself — which is what a person testing a build means by
+ * "install". Without a baked checkout there is nothing to update.
+ */
+async function installDev() {
+  if (!checkoutPath || !fs.existsSync(path.join(checkoutPath, "package.json"))) return "manual";
+
+  const steps = [
+    ["pulling", "fetching the newest code", "git pull --ff-only"],
+    ["installing", "installing what the new build needs", "npm install"],
+  ];
+  if (!process.env.VITE_DEV_SERVER_URL) {
+    steps.push(["building", "rebuilding the chrome", "npm run build"]);
+  }
+
+  for (const [state, label, command] of steps) {
+    tellInstall(state, label);
+    if ((await runStep(command)).code !== 0) {
+      tellInstall("failed", "the update could not finish — the log has the last step");
+      return "failed";
+    }
+  }
+
+  tellInstall("ready", "reopening on the new build");
+  setTimeout(() => {
+    app.relaunch();
+    app.exit(0);
+  }, 700);
+  return "started";
+}
+
 async function installUpdate() {
   const bundle = installedBundle();
-  if (!bundle) return "manual";
+  if (!bundle) return installDev();
+
+  // A read-only or translocated bundle would quit and never come back; say so
+  // before anything is downloaded.
+  const problem = bundleProblem(bundle);
+  if (problem) {
+    tellInstall("failed", problem);
+    return "failed";
+  }
 
   try {
     const release = await fromRelease();
-    swapIn(bundle, release.built, release.cleanup);
+    if (!swapIn(bundle, release.built, release.cleanup)) return "failed";
     return "started";
   } catch (error) {
     tellInstall("failed", error.message);
   }
 
   const built = await fromCheckout();
-  if (built) {
-    swapIn(bundle, built, "");
-    return "started";
-  }
+  if (built && swapIn(bundle, built, "")) return "started";
 
-  tellInstall("failed", "no release to download and no checkout to build from");
-  return "started";
+  tellInstall("failed", "the update could not finish — the log has the last step");
+  return "failed";
 }
 
 ipcMain.handle("scaffold:install-update", () => installUpdate());
