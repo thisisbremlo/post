@@ -16,7 +16,8 @@ export type InternalPage =
   | "shelf"
   | "sittings"
   | "passwords"
-  | "settings";
+  | "settings"
+  | "updates";
 
 export interface Settings {
   /** What the plus button and ⌘T open. */

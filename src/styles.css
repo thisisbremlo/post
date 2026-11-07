@@ -2256,3 +2256,247 @@ svg {
   background: var(--accent-ink);
   color: var(--sheet);
 }
+
+/* ---------- release sheet ---------- */
+
+.release {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  width: 748px;
+  max-width: calc(100vw - 40px);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 18px;
+  background: var(--sheet);
+  box-shadow: var(--shadow-float);
+  animation: dialog-in 190ms var(--ease) both;
+}
+
+.release-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 26px 22px;
+  border-right: 1px solid var(--rule);
+  background: var(--cream);
+}
+
+.release-label {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.release-version {
+  margin: 0;
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.release-sha {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.release-stamp {
+  margin-top: auto;
+  padding: 2px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  color: var(--ink-2);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.release-body {
+  min-width: 0;
+  padding: 26px 28px 22px;
+}
+
+.release-title {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* The changelog stands here as a printed plate, so it needs a mono face. */
+.release-plate {
+  max-width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cream);
+  color: var(--ink-2);
+  font-family: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: 11px;
+  font-variant-ligatures: none;
+  line-height: 1.42;
+  white-space: pre;
+}
+
+.release-plate--page {
+  margin: 14px 0 0;
+  background: var(--sheet);
+  font-size: 12px;
+}
+
+.release-line {
+  max-width: 54ch;
+  margin: 16px 0 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.release-progress {
+  margin: 10px 0 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.release-progress.is-failed {
+  color: #a3341f;
+}
+
+.release-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.release-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--sheet);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background-color 140ms var(--ease), transform 120ms var(--ease);
+}
+
+.release-primary:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+
+.release-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.release-primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.release-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 12px;
+  transition: background-color 140ms var(--ease), color 140ms var(--ease);
+}
+
+.release-link:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.release-later {
+  height: 34px;
+  margin-left: auto;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+  transition: color 140ms var(--ease);
+}
+
+.release-later:hover {
+  color: var(--ink);
+}
+
+/* ---------- updates page ---------- */
+
+.updates-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 6px;
+}
+
+.changelog {
+  margin: 22px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+}
+
+.changelog-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 88px;
+  gap: 14px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 12.5px;
+}
+
+.changelog-sha {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.changelog-title {
+  color: var(--ink);
+}
+
+.changelog-date {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  text-align: right;
+}
+
+@media (max-width: 680px) {
+  .release {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .release-rail {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 18px 20px;
+  }
+
+  .release-stamp {
+    margin: 0 0 0 auto;
+  }
+
+  .release-body {
+    padding: 20px;
+  }
+}

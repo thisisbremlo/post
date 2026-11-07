@@ -5,6 +5,7 @@ import { SettingsPage } from "./SettingsPage";
 import { ShelfPage } from "./ShelfPage";
 import { SittingsPage } from "./SittingsPage";
 import { StartPage } from "./StartPage";
+import { UpdatesPage } from "./UpdatesPage";
 
 export function PageByUrl({ url, title }: { url: string; title: string }) {
   switch (internalPageOf(url)) {
@@ -18,6 +19,8 @@ export function PageByUrl({ url, title }: { url: string; title: string }) {
       return <PasswordsPage />;
     case "settings":
       return <SettingsPage />;
+    case "updates":
+      return <UpdatesPage />;
     case "start":
     default:
       return <StartPage key={title} />;

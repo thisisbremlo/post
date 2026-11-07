@@ -7,6 +7,7 @@ const INTERNAL_TITLES: Record<InternalPage, string> = {
   sittings: "sittings",
   passwords: "passwords",
   settings: "settings",
+  updates: "updates",
 };
 
 const INTERNAL_PAGES = Object.keys(INTERNAL_TITLES) as InternalPage[];

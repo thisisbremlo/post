@@ -42,10 +42,18 @@ export interface NativeViewEvent {
   note?: string;
 }
 
+export interface ChangelogEntry {
+  sha: string;
+  /** The commit subject: the changelog line as it was written on push. */
+  title: string;
+  date: string;
+}
+
 export interface UpdateNotice {
   sha: string;
   version: string;
   notes: string;
+  entries?: ChangelogEntry[];
 }
 
 export interface InstallEvent {

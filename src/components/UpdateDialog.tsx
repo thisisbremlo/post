@@ -1,16 +1,30 @@
 import { useEffect, useState } from "react";
 
 import { bridge } from "../lib/bridge";
-import type { UpdateInfo } from "../lib/updates";
+import { changelogPlate, type UpdateInfo } from "../lib/updates";
+import { usePlateWidth } from "../lib/usePlateWidth";
 import { Icon } from "./Icon";
 
 const PULL = "git pull && npm install";
 
-/** What Chrome's "update ready · relaunch" bubble would say if it were honest. */
-export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose: () => void }) {
+/**
+ * The release, as a printed sheet: a rail with the version on the left, the
+ * changelog set in an ASCII plate on the right, one action that installs it and
+ * one quiet door to the updates page. Nothing here glows or explains itself twice.
+ */
+export function UpdateDialog({
+  update,
+  onClose,
+  onOpenUpdates,
+}: {
+  update: UpdateInfo;
+  onClose: () => void;
+  onOpenUpdates: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const [stage, setStage] = useState<"idle" | "running" | "failed" | "ready" | "manual">("idle");
   const [line, setLine] = useState("");
+  const columns = usePlateWidth(52, 40);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -41,7 +55,10 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
   };
 
   const install = async () => {
-    if (!bridge) return;
+    if (!bridge) {
+      void copy();
+      return;
+    }
     setStage("running");
     setLine("starting…");
     try {
@@ -56,6 +73,17 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
   };
 
   const working = stage === "running";
+  const primary = !bridge
+    ? copied
+      ? "command copied"
+      : "copy the pull command"
+    : working
+      ? "installing…"
+      : stage === "failed"
+        ? "try again"
+        : stage === "ready"
+          ? "reopening…"
+          : "install and relaunch";
 
   return (
     <div
@@ -64,67 +92,48 @@ export function UpdateDialog({ update, onClose }: { update: UpdateInfo; onClose:
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="keep update" role="dialog" aria-modal="true" aria-label="an update is ready">
-        <p className="update-kicker tnum">
-          Post {update.version}
-          {update.notes ? ` · ${update.notes}` : ""}
-        </p>
-        <p className="update-title">A newer build is on main</p>
-        <p className="update-line">
-          {update.commit && update.commit !== update.from ? (
-            <>This build is from {update.from || "an older commit"}; main is at {update.commit}.</>
-          ) : (
-            <>This build is older than the published Post {update.version} on main.</>
-          )}{" "}
-          {bridge
-            ? "Install it and Post downloads the signed release, checks the signature, replaces this copy and reopens. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."
-            : "Pull it, then relaunch. Nothing of yours moves — the shelf, the groups and the sittings live on this machine."}
-        </p>
+      <div className="release" role="dialog" aria-modal="true" aria-label="a newer build is on main">
+        <aside className="release-rail">
+          <p className="release-label">release</p>
+          <p className="release-version tnum">{update.version}</p>
+          <p className="release-sha tnum">{update.commit || "main"}</p>
+          <span className="release-stamp">on main</span>
+        </aside>
 
-        <div className="update-cmd">
-          <code>{PULL}</code>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="copy the update command"
-            title={copied ? "copied" : "copy the command"}
-            onClick={() => void copy()}
-          >
-            <Icon name={copied ? "check" : "copy"} size={14} />
-          </button>
-        </div>
+        <div className="release-body">
+          <h2 className="release-title">a newer build is on main</h2>
+          <pre className="release-plate">{changelogPlate(update, columns)}</pre>
 
-        {(stage !== "idle" || line) && (
-          <p className={"update-progress tnum" + (stage === "failed" ? " is-failed" : "")}>
-            {line}
+          <p className="release-line">
+            {bridge
+              ? "Installing pulls main, rebuilds, replaces this copy and reopens. Your shelf and sittings stay on this machine."
+              : "This preview cannot install. Pull the checkout, then relaunch."}
           </p>
-        )}
 
-        <div className="update-foot">
-          <button type="button" className="text-action" onClick={onClose}>
-            {stage === "ready" ? "close" : "later"}
-          </button>
-          {bridge ? (
+          {(stage !== "idle" || line) && (
+            <p className={"release-progress tnum" + (stage === "failed" ? " is-failed" : "")}>
+              {line}
+            </p>
+          )}
+
+          <div className="release-actions">
             <button
               type="button"
-              className="update-go"
+              className="release-primary"
               disabled={working || stage === "ready"}
               onClick={() => void install()}
             >
-              {working ? "installing…" : stage === "failed" ? "try again" : stage === "ready" ? "reopening…" : "install and relaunch"}
+              {primary}
               {!working && stage !== "ready" && <Icon name="export" size={13} />}
             </button>
-          ) : (
-            <a
-              className="update-go"
-              href={update.url}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              see the change
-              <Icon name="arrow-up-right" size={13} />
-            </a>
-          )}
+            <button type="button" className="release-link" onClick={onOpenUpdates}>
+              what changed
+              <Icon name="arrow-up-right" size={12} />
+            </button>
+            <button type="button" className="release-later" onClick={onClose}>
+              {stage === "ready" ? "close" : "later"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ const PAGE_ICONS: Record<string, IconName> = {
   sittings: "tab",
   passwords: "key",
   settings: "settings",
+  updates: "export",
 };
 
 function iconFor(url: string): IconName {

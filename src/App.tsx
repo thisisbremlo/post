@@ -652,7 +652,16 @@ export function App() {
           }}
         />
       )}
-      {update && updateOpen && <UpdateDialog update={update} onClose={dismissUpdate} />}
+      {update && updateOpen && (
+        <UpdateDialog
+          update={update}
+          onClose={dismissUpdate}
+          onOpenUpdates={() => {
+            dismissUpdate();
+            dispatch({ type: "navigate", url: "scaffold://updates" });
+          }}
+        />
+      )}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
     </div>
   );

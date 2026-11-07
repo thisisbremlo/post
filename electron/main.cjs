@@ -241,8 +241,30 @@ async function checkForUpdates() {
       ),
     ]);
 
-    const entry = (atom ?? "").match(/<entry>([\s\S]*?)<\/entry>/)?.[1] ?? "";
-    const sha = entry.match(/Commit\/([0-9a-f]{40})/)?.[1] ?? "";
+    const decode = (text) =>
+      text
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
+
+    // Every entry is a changelog line: the commit subjects, newest first.
+    const entries = [...(atom ?? "").matchAll(/<entry>([\s\S]*?)<\/entry>/g)]
+      .slice(0, 8)
+      .map((match) => {
+        const block = match[1];
+        return {
+          sha: block.match(/Commit\/([0-9a-f]{40})/)?.[1] ?? "",
+          title: decode(block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "")
+            .replace(/\s+/g, " ")
+            .trim(),
+          date: block.match(/<updated>([^<]+)<\/updated>/)?.[1] ?? "",
+        };
+      })
+      .filter((entry) => entry.sha || entry.title);
+
+    const sha = entries[0]?.sha ?? "";
     const version = feed?.version ?? "";
     if (!sha && !version) return;
 
@@ -250,6 +272,7 @@ async function checkForUpdates() {
       sha,
       version,
       notes: feed?.notes ?? "",
+      entries,
     });
   } catch {
     /* offline, blocked or rate limited: silently nothing new */
