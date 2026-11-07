@@ -2773,6 +2773,28 @@ html.is-overlay .native-surface {
   opacity: 0.4;
 }
 
+.store-chip {
+  display: inline-flex;
+  flex: none;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--sheet);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.store-chip:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+
+.store-chip:disabled {
+  opacity: 0.65;
+}
+
 .choice {
   display: inline-flex;
   gap: 2px;

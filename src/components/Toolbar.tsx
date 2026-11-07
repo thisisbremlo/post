@@ -14,6 +14,9 @@ export function Toolbar({
   onOpenExtensions,
   onMenuChange,
   extensionCount,
+  storePage,
+  storeBusy,
+  onInstallStore,
   update,
   onOpenUpdate,
 }: {
@@ -22,6 +25,9 @@ export function Toolbar({
   onOpenExtensions: (box: DOMRect) => void;
   onMenuChange: (open: boolean) => void;
   extensionCount: number;
+  storePage: boolean;
+  storeBusy: boolean;
+  onInstallStore: () => void;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
 }) {
@@ -183,6 +189,19 @@ export function Toolbar({
         <span>shelf</span>
         <span className="tnum shelf-chip-count">{state.shelf.length}</span>
       </button>
+
+      {storePage && (
+        <button
+          type="button"
+          className="store-chip"
+          disabled={storeBusy}
+          title="install this Chrome Web Store extension in Post"
+          onClick={onInstallStore}
+        >
+          <Icon name="puzzle" size={13} />
+          {storeBusy ? "installing…" : "install in Post"}
+        </button>
+      )}
 
       {update && (
         <button

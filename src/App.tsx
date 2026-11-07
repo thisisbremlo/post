@@ -89,6 +89,7 @@ export function App() {
   const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
   const [extMenu, setExtMenu] = useState<{ x: number; y: number } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [storeBusy, setStoreBusy] = useState(false);
   const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
 
   const stageRef = useRef<HTMLElement>(null);
@@ -98,6 +99,11 @@ export function App() {
 
   const keepTab = state.tabs.find((tab) => tab.id === keepTabId) ?? activeTab;
   const bookmarkTab = state.tabs.find((tab) => tab.id === bookmarkTabId) ?? null;
+  const storePage =
+    internalPageOf(activeTab.url) === null &&
+    /^https:\/\/(?:chromewebstore\.google\.com|chrome\.google\.com\/webstore)\//.test(
+      activeTab.url,
+    );
   const floating =
     keepOpen ||
     paletteOpen ||
@@ -139,6 +145,26 @@ export function App() {
     if (internalPageOf(tab.url) !== null) return;
     dispatch({ type: "bookmark-add", url: tab.url, title: tab.title });
     setBookmarkTabId(tab.id);
+  };
+
+  // Chrome's own install button is internal browser UI, not a web API. When a
+  // store page is open, Post offers the install it can actually perform.
+  const installStoreExtension = async () => {
+    if (!bridge || storeBusy) return;
+    setStoreBusy(true);
+    dispatch({ type: "notice", text: "installing the extension…" });
+    try {
+      await bridge.installFromStore(activeTab.url);
+      window.dispatchEvent(new CustomEvent("scaffold:extensions-changed"));
+      dispatch({ type: "notice", text: "extension installed — it is behind the puzzle" });
+    } catch {
+      dispatch({
+        type: "notice",
+        text: "this extension needs Chrome APIs Post cannot run",
+      });
+    } finally {
+      setStoreBusy(false);
+    }
   };
 
   // ⌘⇧D, and the toolbar button, both open the same one-line note.
@@ -925,6 +951,9 @@ export function App() {
         }
         extensionCount={extensions.length}
         onMenuChange={setToolsOpen}
+        storePage={storePage}
+        storeBusy={storeBusy}
+        onInstallStore={() => void installStoreExtension()}
         onOpenExtensions={(box) =>
           setExtMenu({
             x: Math.min(Math.max(12, box.right - 300), window.innerWidth - 312),
