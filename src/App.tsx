@@ -956,6 +956,67 @@ export function App() {
     return () => document.documentElement.classList.remove("is-overlay");
   }, [overlaysNative]);
 
+  // A floating surface raises the chrome over the native page, which otherwise
+  // traps wheel gestures. Send gestures over the page through to its view; a
+  // dialog or menu keeps its own wheel handling.
+  useEffect(() => {
+    const nativeBridge = bridge;
+    if (!nativeBridge || !overlaysNative) return;
+
+    let frame = 0;
+    let pendingX = 0;
+    let pendingY = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+
+    const flush = () => {
+      frame = 0;
+      const deltaX = pendingX;
+      const deltaY = pendingY;
+      pendingX = 0;
+      pendingY = 0;
+      if (deltaX === 0 && deltaY === 0) return;
+      nativeBridge.scrollPage(deltaX, deltaY, pointerX, pointerY);
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaX === 0 && event.deltaY === 0) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('[role="dialog"], [role="menu"]')) return;
+
+      const sheet = stageRef.current?.querySelector<HTMLElement>("[data-sheet='active']");
+      if (!sheet) return;
+      const bounds = sheet.getBoundingClientRect();
+      if (
+        event.clientX < bounds.left ||
+        event.clientX > bounds.right ||
+        event.clientY < bounds.top ||
+        event.clientY > bounds.bottom
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      const unit =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? bounds.height
+            : 1;
+      pendingX += event.deltaX * unit;
+      pendingY += event.deltaY * unit;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (!frame) frame = window.requestAnimationFrame(flush);
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [overlaysNative]);
+
   useEffect(() => {
     if (!bridge) return;
     const stage = stageRef.current;

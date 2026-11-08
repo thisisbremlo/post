@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld("scaffold", {
 
   syncLayout: (layout) => ipcRenderer.send("scaffold:sync-layout", layout),
   setOverlay: (open) => ipcRenderer.send("scaffold:overlay", Boolean(open)),
+  scrollPage: (deltaX, deltaY, x, y) =>
+    ipcRenderer.send("scaffold:scroll-page", { deltaX, deltaY, x, y }),
   setPreferences: (preferences) => ipcRenderer.send("scaffold:preferences", preferences),
 
   openDownloads: () => ipcRenderer.send("scaffold:open-downloads"),

@@ -409,6 +409,47 @@ function applyLayout(layout) {
   }
 }
 
+/**
+ * A raised chrome receives the wheel, but the site underneath should still
+ * scroll. Re-emit the gesture in the active page's view, in its own coordinates.
+ */
+function scrollActivePage(payload) {
+  if (!overlayOpen || !lastLayout?.activeTab) return;
+  const active = lastLayout.activeTab;
+  if (isInternalUrl(active.url)) return;
+  const entry = pageViews.get(active.id);
+  if (!entry || entry.view.webContents.isDestroyed()) return;
+
+  const bounds = boundsOf(active.rect);
+  if (bounds.width <= 0 || bounds.height <= 0) return;
+
+  const requestedX = Number(payload?.x);
+  const requestedY = Number(payload?.y);
+  const screenX = Number.isFinite(requestedX) ? requestedX : bounds.x + bounds.width / 2;
+  const screenY = Number.isFinite(requestedY) ? requestedY : bounds.y + bounds.height / 2;
+  const wheelDelta = (value) => {
+    const delta = Number(value);
+    if (!Number.isFinite(delta)) return 0;
+    return Math.max(-2400, Math.min(2400, Math.round(delta)));
+  };
+
+  // WebMouseWheelEvent deltas run positive up and left: the reverse of a DOM
+  // WheelEvent. The units are pixels, matching the browser's pixel deltas.
+  const deltaX = -wheelDelta(payload?.deltaX);
+  const deltaY = -wheelDelta(payload?.deltaY);
+  if (deltaX === 0 && deltaY === 0) return;
+
+  entry.view.webContents.sendInputEvent({
+    type: "mouseWheel",
+    x: Math.max(0, Math.min(bounds.width - 1, Math.round(screenX - bounds.x))),
+    y: Math.max(0, Math.min(bounds.height - 1, Math.round(screenY - bounds.y))),
+    deltaX,
+    deltaY,
+    hasPreciseScrollingDeltas: true,
+    canScroll: true,
+  });
+}
+
 function destroyTab(tabId) {
   const entry = pageViews.get(tabId);
   if (!entry) return;
@@ -965,6 +1006,8 @@ ipcMain.on("scaffold:open-downloads", () => {
 });
 
 ipcMain.on("scaffold:sync-layout", (_event, layout) => applyLayout(layout));
+
+ipcMain.on("scaffold:scroll-page", (_event, payload) => scrollActivePage(payload));
 
 ipcMain.on("scaffold:overlay", (_event, open) => {
   const next = Boolean(open);

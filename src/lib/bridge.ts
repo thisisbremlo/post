@@ -128,6 +128,8 @@ export interface ScaffoldBridge {
   syncLayout: (layout: LayoutSync) => void;
   /** Modal overlays must lift the native page views or they cover them. */
   setOverlay: (open: boolean) => void;
+  /** Passes wheel gestures through the raised chrome to the page underneath. */
+  scrollPage: (deltaX: number, deltaY: number, x: number, y: number) => void;
   /** Applies default zoom and Do Not Track to every page view, now and later. */
   setPreferences: (preferences: PagePreferences) => void;
   openDownloads: () => void;

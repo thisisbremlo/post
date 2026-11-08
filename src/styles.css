@@ -1104,13 +1104,16 @@ svg {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 16vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16vh 0 24px;
   background: rgba(28, 20, 14, 0.28);
 }
 
 .overlay--palette {
   padding-top: 12vh;
 }
+
 
 .keep {
   position: relative;
