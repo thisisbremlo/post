@@ -60,27 +60,27 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
       }}
     >
       <div
-        className="keep bookmark-dialog"
+        className="keep editor-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="bookmark-dialog-title"
+        aria-labelledby="editor-dialog-title"
         onKeyDown={(event) => {
           if (event.key === "Escape") onClose();
         }}
       >
-        <header className="bookmark-dialog-head">
-          <span className="bookmark-dialog-mark">
+        <header className="editor-dialog-head">
+          <span className="editor-dialog-mark">
             <Icon name="bookmark" size={15} />
           </span>
-          <div className="bookmark-dialog-heading">
-            <p className="bookmark-kicker">Saved Pages</p>
-            <h2 className="bookmark-dialog-title" id="bookmark-dialog-title">
+          <div className="editor-dialog-heading">
+            <p className="editor-kicker">Saved Pages</p>
+            <h2 className="editor-dialog-title" id="editor-dialog-title">
               {existing ? "Edit Bookmark" : "New Bookmark"}
             </h2>
           </div>
           <button
             type="button"
-            className="bookmark-close"
+            className="editor-close"
             aria-label="Close"
             title="Close"
             onClick={onClose}
@@ -89,19 +89,19 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
           </button>
         </header>
 
-        <div className="bookmark-source">
-          <span className="bookmark-source-icon">
+        <div className="editor-source">
+          <span className="editor-source-icon">
             <Icon name="globe" size={14} />
           </span>
-          <div className="bookmark-source-copy">
-            <p className="bookmark-source-title">{tab.title}</p>
-            <p className="bookmark-source-url tnum">{displayAddress(tab.url)}</p>
+          <div className="editor-source-copy">
+            <p className="editor-source-title">{tab.title}</p>
+            <p className="editor-source-url tnum">{displayAddress(tab.url)}</p>
           </div>
         </div>
 
-        <div className="bookmark-form">
-          <label className="bookmark-field">
-            <span className="bookmark-label">Name</span>
+        <div className="editor-form">
+          <label className="editor-field">
+            <span className="editor-label">Name</span>
             <input
               ref={nameRef}
               className="setting-input"
@@ -111,8 +111,8 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
               onKeyDown={onKeyDown}
             />
           </label>
-          <label className="bookmark-field">
-            <span className="bookmark-label">Folder</span>
+          <label className="editor-field">
+            <span className="editor-label">Folder</span>
             <input
               className="setting-input"
               value={folder}
@@ -121,7 +121,7 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
               onChange={(event) => setFolder(event.target.value)}
               onKeyDown={onKeyDown}
             />
-            <span className="bookmark-field-note">Leave blank to use the Bookmarks Bar.</span>
+            <span className="editor-field-note">Leave blank to use the Bookmarks Bar.</span>
           </label>
           <datalist id="bookmark-folders">
             {folders.map((name) => (
@@ -130,19 +130,19 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
           </datalist>
         </div>
 
-        <footer className="bookmark-actions">
-          <div className="bookmark-actions-meta">
+        <footer className="editor-actions">
+          <div className="editor-actions-meta">
             {existing && (
               <button
                 type="button"
-                className="setting-action is-secondary bookmark-delete"
+                className="setting-action is-secondary editor-delete"
                 onClick={remove}
               >
                 <Icon name="trash" size={13} />
                 Remove
               </button>
             )}
-            <span className="bookmark-hint tnum">↵ Save · Esc to Close</span>
+            <span className="editor-hint tnum">↵ Save · Esc to Close</span>
           </div>
           <button type="button" className="setting-action" onClick={save}>
             Save
