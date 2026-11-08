@@ -42,6 +42,8 @@ export interface Settings {
   doNotTrack: boolean;
   /** The Chrome-style strip under the address bar. */
   bookmarksBar: boolean;
+  /** The small "Removed 32 ads" line under the blocker. */
+  adblockNotices: boolean;
   /** Full micro-motion, or none of it. */
   animations: "full" | "reduced";
 }

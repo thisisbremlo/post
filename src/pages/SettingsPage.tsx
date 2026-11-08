@@ -257,6 +257,25 @@ export function SettingsPage() {
 
           <section className="setting-row">
             <div className="setting-copy">
+              <h3 className="setting-name">block notices</h3>
+              <p className="setting-note">
+                A small “Removed 32 ads” line under the blocker when a page loses something. The
+                panel stays available either way.
+              </p>
+            </div>
+            <Choice
+              label="block notices"
+              value={settings.adblockNotices ? "show" : "hide"}
+              onChange={(value) => set({ adblockNotices: value === "show" })}
+              options={[
+                ["show", "show"],
+                ["hide", "hide"],
+              ]}
+            />
+          </section>
+
+          <section className="setting-row">
+            <div className="setting-copy">
               <h3 className="setting-name">extra lists</h3>
               <p className="setting-note">
                 EasyList-style URLs, merged with the built-in ads and tracking lists. A list that

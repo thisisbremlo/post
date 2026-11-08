@@ -2133,14 +2133,14 @@ svg {
   transform: scale(0.9);
 }
 
-/* The plus sits against the last tab, and turns as it is pressed. */
+/* The plus sits just after the last tab, with a breath of space, and turns as it is pressed. */
 .tab-new {
   display: grid;
   place-items: center;
   flex: none;
   width: 28px;
   height: 28px;
-  margin-left: -6px;
+  margin-left: 0;
   border-radius: 8px;
   background: var(--cream-deep);
   color: var(--ink-2);
@@ -2418,6 +2418,53 @@ svg {
 .adblock-chip.is-off .icon,
 .adblock-chip.is-paused .icon {
   color: var(--ink-3);
+}
+
+/* A quiet confirmation, not a second panel. It sits under the chip. */
+.adblock-toast {
+  position: fixed;
+  z-index: 46;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  min-height: 34px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid #e1e6ef;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #172235;
+  font-size: 11px;
+  box-shadow: 0 10px 26px rgba(14, 35, 64, 0.16), 0 2px 6px rgba(14, 35, 64, 0.06);
+  animation: menu-in 130ms var(--ease) both;
+  transform-origin: top right;
+}
+
+.adblock-toast > .icon {
+  flex: none;
+  color: #0b84d8;
+}
+
+.adblock-toast-text {
+  white-space: nowrap;
+}
+
+.adblock-toast-text strong {
+  font-weight: 600;
+}
+
+.adblock-toast-off {
+  flex: none;
+  padding: 3px 4px;
+  border-radius: 5px;
+  color: #0969a9;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.adblock-toast-off:hover {
+  background: #eef6ff;
 }
 
 /* ---------- adblock panel ---------- */

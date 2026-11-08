@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AdblockState } from "../lib/bridge";
 import type { UpdateInfo } from "../lib/updates";
@@ -15,6 +15,7 @@ export function Toolbar({
   onOpenTurbo,
   onMenuChange,
   onAdblockOpen,
+  onAdblockNotice,
   update,
   onOpenUpdate,
   adblock,
@@ -23,6 +24,7 @@ export function Toolbar({
   onOpenTurbo: (box: DOMRect) => void;
   onMenuChange: (open: boolean) => void;
   onAdblockOpen: (open: boolean) => void;
+  onAdblockNotice: (open: boolean) => void;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
   adblock: AdblockState | null;
@@ -34,16 +36,134 @@ export function Toolbar({
   const [adblockPanel, setAdblockPanel] = useState<{ right: number; bottom: number } | null>(
     null,
   );
+  const [adblockToast, setAdblockToast] = useState<{
+    count: number;
+    right: number;
+    bottom: number;
+  } | null>(null);
+  const adblockChipRef = useRef<HTMLButtonElement>(null);
+  const toastTimer = useRef<number | null>(null);
+  const lastBlocked = useRef({ host: "", count: 0 });
+
+  const hideAdblockToast = useCallback(() => {
+    if (toastTimer.current !== null) {
+      window.clearTimeout(toastTimer.current);
+      toastTimer.current = null;
+    }
+    setAdblockToast(null);
+    onAdblockNotice(false);
+  }, [onAdblockNotice]);
+
+  const showAdblockToast = useCallback(
+    (count: number) => {
+      const box = adblockChipRef.current?.getBoundingClientRect();
+      if (!box || box.width === 0) return;
+      setAdblockToast({ count, right: box.right, bottom: box.bottom });
+      onAdblockNotice(true);
+      // A growing count updates the words, not the window the reader gets.
+      if (toastTimer.current === null) {
+        toastTimer.current = window.setTimeout(() => {
+          toastTimer.current = null;
+          setAdblockToast(null);
+          onAdblockNotice(false);
+        }, 3200);
+      }
+    },
+    [onAdblockNotice],
+  );
 
   // A popup belongs to the page it describes; a new address closes it.
   useEffect(() => {
+    hideAdblockToast();
     setAdblockPanel(null);
     onAdblockOpen(false);
-  }, [tab.id, tab.url, onAdblockOpen]);
+  }, [tab.id, tab.url, onAdblockOpen, hideAdblockToast]);
+
+  // A blocked request is worth one quiet line, not a badge that never changes.
+  // The first state for a host is already a total, so it is the first message.
+  useEffect(() => {
+    if (!adblock) return;
+    const host = adblock.activeHost;
+    const count = adblock.siteBlocked;
+    const previous = lastBlocked.current;
+
+    if (host !== previous.host) {
+      lastBlocked.current = { host, count };
+      if (
+        count > 0 &&
+        adblock.enabled &&
+        !adblock.paused &&
+        state.settings.adblockNotices &&
+        !adblockPanel
+      ) {
+        showAdblockToast(count);
+      } else {
+        hideAdblockToast();
+      }
+      return;
+    }
+
+    if (count < previous.count) {
+      lastBlocked.current.count = count;
+      hideAdblockToast();
+      return;
+    }
+    if (count === previous.count) return;
+
+    lastBlocked.current.count = count;
+    if (
+      !adblock.enabled ||
+      adblock.paused ||
+      !state.settings.adblockNotices ||
+      adblockPanel
+    ) {
+      return;
+    }
+    showAdblockToast(count);
+  }, [
+    adblock?.activeHost,
+    adblock?.siteBlocked,
+    adblock?.enabled,
+    adblock?.paused,
+    state.settings.adblockNotices,
+    adblockPanel,
+    showAdblockToast,
+    hideAdblockToast,
+  ]);
+
+  // Turning notices off, opening the panel, or pausing should silence a toast
+  // that is already on screen.
+  useEffect(() => {
+    if (
+      !state.settings.adblockNotices ||
+      adblockPanel ||
+      !adblock?.enabled ||
+      adblock?.paused
+    ) {
+      hideAdblockToast();
+    }
+  }, [
+    state.settings.adblockNotices,
+    adblockPanel,
+    adblock?.enabled,
+    adblock?.paused,
+    hideAdblockToast,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   const closeAdblock = () => {
     setAdblockPanel(null);
     onAdblockOpen(false);
+  };
+
+  const turnOffAdblockNotices = () => {
+    dispatch({ type: "settings", settings: { adblockNotices: false } });
+    hideAdblockToast();
   };
 
   // The three dots are the browser's own drawer: places to go, settings to change.
@@ -174,6 +294,7 @@ export function Toolbar({
 
       {adblock && (
         <button
+          ref={adblockChipRef}
           type="button"
           className={
             "palette-chip adblock-chip" +
@@ -205,6 +326,30 @@ export function Toolbar({
             {!adblock.enabled ? "off" : adblock.paused ? "paused" : adblock.siteBlocked}
           </span>
         </button>
+      )}
+
+      {adblockToast && !adblockPanel && (
+        <div
+          className="adblock-toast"
+          role="status"
+          style={{
+            top: adblockToast.bottom + 8,
+            right: Math.max(8, window.innerWidth - adblockToast.right),
+          }}
+        >
+          <Icon name="shield" size={14} />
+          <span className="adblock-toast-text">
+            Removed <strong className="tnum">{adblockToast.count}</strong>{" "}
+            {adblockToast.count === 1 ? "ad" : "ads"}
+          </span>
+          <button
+            type="button"
+            className="adblock-toast-off"
+            onClick={turnOffAdblockNotices}
+          >
+            turn off
+          </button>
+        </div>
       )}
 
       <button

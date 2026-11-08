@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
   zoom: 100,
   doNotTrack: false,
   bookmarksBar: true,
+  adblockNotices: true,
   animations: "full",
 };
 /** Blue leads because it is the brand's; red stays readable for groups already filed. */
@@ -658,6 +659,7 @@ function restore(): ScaffoldState {
       zoom: stored.zoom === 90 || stored.zoom === 110 || stored.zoom === 125 ? stored.zoom : 100,
       doNotTrack: stored.doNotTrack === true,
       bookmarksBar: stored.bookmarksBar !== false,
+      adblockNotices: stored.adblockNotices !== false,
       animations: stored.animations === "reduced" ? "reduced" : "full",
     };
     const bookmarks = Array.isArray(parsed.bookmarks)

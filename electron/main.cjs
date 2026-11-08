@@ -397,6 +397,14 @@ function applyLayout(layout) {
     }
   } else if (referenceView) {
     referenceView.setVisible(false);
+    win.contentView.removeChildView(referenceView);
+    const contents = referenceView.webContents;
+    if (!contents.isDestroyed()) {
+      contents.setAudioMuted(true);
+      contents.stop();
+      contents.close();
+    }
+    referenceView = null;
     referenceUrl = null;
   }
 }
@@ -406,7 +414,13 @@ function destroyTab(tabId) {
   if (!entry) return;
   entry.view.setVisible(false);
   win?.contentView.removeChildView(entry.view);
-  entry.view.webContents.close();
+  const contents = entry.view.webContents;
+  if (!contents.isDestroyed()) {
+    // A page closed by the tab's X must not keep a video or a call audible.
+    contents.setAudioMuted(true);
+    contents.stop();
+    contents.close();
+  }
   pageViews.delete(tabId);
 }
 

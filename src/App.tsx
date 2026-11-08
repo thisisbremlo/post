@@ -89,6 +89,7 @@ export function App() {
   const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [adblockOpen, setAdblockOpen] = useState(false);
+  const [adblockNotice, setAdblockNotice] = useState(false);
   const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
   const [reader, setReader] = useState<Article | null>(null);
   const [adblock, setAdblock] = useState<AdblockState | null>(null);
@@ -99,6 +100,8 @@ export function App() {
   stateRef.current = state;
   const adblockRef = useRef(adblock);
   adblockRef.current = adblock;
+  const knownTabIds = useRef<Set<string> | null>(null);
+  const reloadKeys = useRef(new Map<string, number>());
 
   const keepTab = state.tabs.find((tab) => tab.id === keepTabId) ?? activeTab;
   const bookmarkTab = state.tabs.find((tab) => tab.id === bookmarkTabId) ?? null;
@@ -112,7 +115,8 @@ export function App() {
     menu !== null ||
     turbo !== null ||
     toolsOpen ||
-    adblockOpen;
+    adblockOpen ||
+    adblockNotice;
   const overlaysNative = bridge !== null && floating && internalPageOf(activeTab.url) === null;
 
   // One dialog per new build, not per launch: closing it is enough until main moves again.
@@ -195,6 +199,36 @@ export function App() {
       off();
     };
   }, []);
+
+  // Closing a tab is a native operation: without it the WebContentsView keeps
+  // its page alive, and a video or a call keeps playing after the tab is gone.
+  useEffect(() => {
+    if (!bridge) return;
+    const current = new Set(state.tabs.map((tab) => tab.id));
+    const previous = knownTabIds.current;
+    knownTabIds.current = current;
+    if (!previous) return;
+    for (const id of previous) {
+      if (!current.has(id)) bridge.closeTab(id);
+    }
+  }, [state.tabs]);
+
+  // The native page is not a React child, so a reload has to reach its view.
+  // The key still powers the web harness's iframe and keeps both paths aligned.
+  useEffect(() => {
+    if (!bridge) return;
+    const open = new Set(state.tabs.map((tab) => tab.id));
+    for (const tab of state.tabs) {
+      const previous = reloadKeys.current.get(tab.id);
+      if (previous !== undefined && tab.reloadKey > previous) {
+        bridge.viewAction(tab.id, "reload");
+      }
+      reloadKeys.current.set(tab.id, tab.reloadKey);
+    }
+    for (const id of reloadKeys.current.keys()) {
+      if (!open.has(id)) reloadKeys.current.delete(id);
+    }
+  }, [state.tabs]);
 
   // The shell reads main through the checkout's own git remote, so a private
   // repo needs no token; the harness asks the public feed instead.
@@ -982,6 +1016,7 @@ export function App() {
         }
         onMenuChange={setToolsOpen}
         onAdblockOpen={setAdblockOpen}
+        onAdblockNotice={setAdblockNotice}
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
         adblock={adblock}
