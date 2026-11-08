@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-import { bridge } from "../lib/bridge";
+import { Icon } from "../components/Icon";
+import { bridge, type AdblockState } from "../lib/bridge";
 import { useStore } from "../state/store";
 import type { Settings } from "../state/types";
 
@@ -45,8 +47,66 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 export function SettingsPage() {
   const { state, dispatch } = useStore();
   const { settings } = state;
+  const [adblock, setAdblock] = useState<AdblockState | null>(null);
+  const [listInput, setListInput] = useState("");
 
   const set = (next: Partial<Settings>) => dispatch({ type: "settings", settings: next });
+
+  useEffect(() => {
+    if (!bridge) return;
+    let live = true;
+    bridge
+      .getAdblockState()
+      .then((next) => {
+        if (live) setAdblock(next);
+      })
+      .catch(() => undefined);
+    const off = bridge.onAdblock(setAdblock);
+    return () => {
+      live = false;
+      off();
+    };
+  }, []);
+
+  const setBlocking = async (enabled: boolean) => {
+    if (!bridge) return;
+    const next = await bridge.setAdblockEnabled(enabled);
+    setAdblock(next);
+    dispatch({ type: "notice", text: enabled ? "ad blocking on" : "ad blocking off" });
+  };
+
+  const allowHost = async (host: string, allowed: boolean) => {
+    if (!bridge) return;
+    const next = await bridge.setAdblockSite(host, allowed);
+    setAdblock(next);
+  };
+
+  const refreshLists = async () => {
+    if (!bridge) return;
+    setAdblock(await bridge.refreshAdblock());
+    dispatch({ type: "notice", text: "ad lists refreshed" });
+  };
+
+  const saveLists = async (lists: string[]) => {
+    if (!bridge) return;
+    setAdblock(await bridge.setAdblockLists(lists));
+  };
+
+  const addList = async () => {
+    const url = listInput.trim();
+    try {
+      if (!/^https?:$/.test(new URL(url).protocol)) throw new Error("not a web address");
+    } catch {
+      dispatch({ type: "notice", text: "a filter list needs a complete https address" });
+      return;
+    }
+    if (adblock?.lists.includes(url)) {
+      dispatch({ type: "notice", text: "that list is already in the mix" });
+      return;
+    }
+    await saveLists([...(adblock?.lists ?? []), url]);
+    setListInput("");
+  };
 
   return (
     <div className="page">
@@ -167,6 +227,134 @@ export function SettingsPage() {
                 ["hide", "hide"],
               ]}
             />
+          </section>
+        </Group>
+
+        <Group title="blocking">
+          <section className="setting-row">
+            <div className="setting-copy">
+              <h3 className="setting-name">ad blocking</h3>
+              <p className="setting-note">
+                Ghostery's ads and tracking lists, enforced in the browser's network session — no
+                extension, no page script. {adblock ? `${adblock.blocked} requests blocked this session.` : ""}
+              </p>
+            </div>
+            {bridge ? (
+              <Choice
+                label="ad blocking"
+                value={adblock?.enabled === false ? "off" : "on"}
+                onChange={(value) => void setBlocking(value === "on")}
+                options={[
+                  ["on", "on"],
+                  ["off", "off"],
+                ]}
+              />
+            ) : (
+              <span className="setting-static">desktop only</span>
+            )}
+          </section>
+
+          <section className="setting-row">
+            <div className="setting-copy">
+              <h3 className="setting-name">extra lists</h3>
+              <p className="setting-note">
+                EasyList-style URLs, merged with the built-in ads and tracking lists. A list that
+                cannot be fetched leaves the built-in lists working.
+              </p>
+              {adblock && adblock.lists.length > 0 ? (
+                <div className="adblock-allow">
+                  {adblock.lists.map((url) => (
+                    <button
+                      key={url}
+                      type="button"
+                      className="allow-chip"
+                      title="remove this list"
+                      onClick={() =>
+                        void saveLists(adblock.lists.filter((entry) => entry !== url))
+                      }
+                    >
+                      {(() => {
+                        try {
+                          return new URL(url).hostname;
+                        } catch {
+                          return url;
+                        }
+                      })()}
+                      <Icon name="close" size={11} />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="setting-static">None — built-in lists only.</p>
+              )}
+            </div>
+            {bridge && (
+              <form
+                className="adblock-list-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void addList();
+                }}
+              >
+                <input
+                  className="text-input"
+                  value={listInput}
+                  placeholder="https://…/filters.txt"
+                  aria-label="extra filter list address"
+                  spellCheck={false}
+                  onChange={(event) => setListInput(event.target.value)}
+                />
+                <button type="submit" className="setting-action">
+                  add list
+                </button>
+              </form>
+            )}
+          </section>
+
+          <section className="setting-row">
+            <div className="setting-copy">
+              <h3 className="setting-name">exceptions</h3>
+              <p className="setting-note">
+                Sites you let through. A pause follows the page in front; the rest stay blocked.
+              </p>
+              {adblock && adblock.allow.length > 0 ? (
+                <div className="adblock-allow">
+                  {adblock.allow.map((host) => (
+                    <button
+                      key={host}
+                      type="button"
+                      className="allow-chip"
+                      title={`block ads on ${host} again`}
+                      onClick={() => void allowHost(host, false)}
+                    >
+                      {host}
+                      <Icon name="close" size={11} />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="setting-static">No exceptions.</p>
+              )}
+            </div>
+            <div className="adblock-status">
+              <span className="setting-static">
+                {adblock?.error
+                  ? "lists unavailable — the old cache is still in use"
+                  : adblock?.updatedAt
+                    ? `lists from ${new Date(adblock.updatedAt).toLocaleDateString("en", {
+                        day: "numeric",
+                        month: "short",
+                      })}`
+                    : adblock?.ready
+                      ? "lists loaded"
+                      : "loading lists…"}
+              </span>
+              {bridge && (
+                <button type="button" className="setting-action" onClick={() => void refreshLists()}>
+                  refresh lists
+                </button>
+              )}
+            </div>
           </section>
         </Group>
 

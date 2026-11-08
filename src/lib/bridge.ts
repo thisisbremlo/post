@@ -75,6 +75,26 @@ export interface PagePreferences {
   doNotTrack: boolean;
 }
 
+export interface AdblockState {
+  enabled: boolean;
+  blocked: number;
+  updatedAt: number | null;
+  /** Hosts explicitly allowed through the blocker. */
+  allow: string[];
+  /** Extra filter-list URLs, merged with Ghostery's built-in lists. */
+  lists: string[];
+  activeHost: string;
+  paused: boolean;
+  ready: boolean;
+  error: string | null;
+}
+
+export interface Article {
+  title: string;
+  url: string;
+  text: string;
+}
+
 export interface InstallEvent {
   state: "downloading" | "verifying" | "pulling" | "installing" | "building" | "ready" | "failed";
   /** The last useful line of output, or why it stopped. */
@@ -99,6 +119,15 @@ export interface ScaffoldBridge {
   navigate: (tabId: string, url: string) => void;
   /** Reads the page's own account of itself; null on Post's pages and on failure. */
   readPageMeta: (tabId: string) => Promise<PageMeta | null>;
+  /** The readable article, stripped of chrome; "reference" reads the held pane. */
+  readArticle: (tabId: string) => Promise<Article | null>;
+  getAdblockState: () => Promise<AdblockState>;
+  setAdblockEnabled: (enabled: boolean) => Promise<AdblockState>;
+  /** Allowlist one host, or put it back under the blocker. */
+  setAdblockSite: (host: string, allowed: boolean) => Promise<AdblockState>;
+  setAdblockLists: (lists: string[]) => Promise<AdblockState>;
+  refreshAdblock: () => Promise<AdblockState>;
+  onAdblock: (handler: (state: AdblockState) => void) => () => void;
   /** Chrome's own update button: quit and come back on the pulled build. */
   relaunch: () => void;
   closeTab: (tabId: string) => void;

@@ -79,6 +79,14 @@ export function SittingsPage() {
                   </button>
                   <button
                     type="button"
+                    className="text-action"
+                    title="replace this desk with the tabs open now"
+                    onClick={() => dispatch({ type: "update-sitting", id: sitting.id })}
+                  >
+                    update
+                  </button>
+                  <button
+                    type="button"
                     className="icon-btn"
                     aria-label={`delete ${sitting.name}`}
                     title="delete this sitting"

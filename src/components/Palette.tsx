@@ -6,7 +6,7 @@ import { useStore } from "../state/store";
 import type { IconName } from "./Icon";
 import { Icon } from "./Icon";
 
-type ResultKind = "address" | "tab" | "shelf" | "history";
+type ResultKind = "address" | "tab" | "shelf" | "note" | "history";
 
 interface Result {
   key: string;
@@ -21,12 +21,14 @@ const ICONS: Record<ResultKind, IconName> = {
   address: "arrow-up-right",
   tab: "tab",
   shelf: "sheets",
+  note: "reader",
   history: "clock",
 };
 
 const GROUPS: { kind: ResultKind; label: string }[] = [
   { kind: "tab", label: "open tabs" },
   { kind: "shelf", label: "shelf" },
+  { kind: "note", label: "turbo notes" },
   { kind: "history", label: "history" },
 ];
 
@@ -87,6 +89,17 @@ export function Palette({ onClose }: { onClose: () => void }) {
       });
     }
 
+    for (const note of state.notes) {
+      if (q && !matches(note.text)) continue;
+      out.push({
+        key: `note-${note.id}`,
+        kind: "note",
+        title: note.text,
+        meta: `turbo · ${relativeTime(note.createdAt)}`,
+        url: "scaffold://turbo",
+      });
+    }
+
     for (const entry of state.history) {
       if (q && !matches(entry.title) && !matches(entry.url)) continue;
       if (seen.has(entry.url)) continue;
@@ -102,7 +115,7 @@ export function Palette({ onClose }: { onClose: () => void }) {
     }
 
     return out;
-  }, [query, state.tabs, state.shelf, state.history, state.settings.search]);
+  }, [query, state.tabs, state.shelf, state.notes, state.history, state.settings.search]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -122,6 +135,8 @@ export function Palette({ onClose }: { onClose: () => void }) {
       dispatch({ type: "activate-tab", id: result.tabId });
     } else if (result.kind === "address" || result.kind === "history") {
       dispatch({ type: "navigate", url: result.url });
+    } else if (result.kind === "note") {
+      dispatch({ type: "navigate", url: "scaffold://turbo" });
     } else {
       dispatch({ type: "open-tab", url: result.url });
     }
@@ -149,7 +164,7 @@ export function Palette({ onClose }: { onClose: () => void }) {
             ref={inputRef}
             className="palette-input"
             value={query}
-            placeholder="tabs, shelf, history, or an address"
+            placeholder="tabs, shelf, notes, history, or an address"
             aria-label="search the catalogue"
             spellCheck={false}
             onChange={(event) => setQuery(event.target.value)}

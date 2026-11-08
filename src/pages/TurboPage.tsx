@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { Icon } from "../components/Icon";
 import { relativeTime } from "../lib/time";
 import { useStore } from "../state/store";
@@ -5,7 +7,10 @@ import { useStore } from "../state/store";
 /** Every turbo note, newest first: the page the bolt's count opens. */
 export function TurboPage() {
   const { state, dispatch } = useStore();
+  const [query, setQuery] = useState("");
   const { notes } = state;
+  const needle = query.trim().toLowerCase();
+  const shown = notes.filter((note) => !needle || note.text.toLowerCase().includes(needle));
 
   return (
     <div className="page">
@@ -22,8 +27,26 @@ export function TurboPage() {
         {notes.length === 0 ? (
           <p className="empty">Nothing yet. The bolt in the toolbar writes the first one.</p>
         ) : (
-          <ul className="note-list">
-            {notes.map((note) => (
+          <>
+            <div className="bookmark-search page-search">
+              <Icon name="search" size={14} />
+              <input
+                className="bookmark-search-input"
+                value={query}
+                placeholder="search turbo notes"
+                aria-label="search turbo notes"
+                spellCheck={false}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <span className="bookmark-search-count tnum">
+                {shown.length} of {notes.length}
+              </span>
+            </div>
+            {shown.length === 0 ? (
+              <p className="empty">No note matches “{query.trim()}”.</p>
+            ) : (
+              <ul className="note-list">
+                {shown.map((note) => (
               <li className="note-row" key={note.id}>
                 <p className="note-text">{note.text}</p>
                 <span className="note-time tnum">{relativeTime(note.createdAt)}</span>
@@ -36,9 +59,11 @@ export function TurboPage() {
                 >
                   <Icon name="trash" size={13} />
                 </button>
-              </li>
-            ))}
-          </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
 
         <p className="fineprint">

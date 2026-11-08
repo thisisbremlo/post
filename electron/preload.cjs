@@ -24,6 +24,19 @@ contextBridge.exposeInMainWorld("scaffold", {
   navigate: (tabId, url) => ipcRenderer.send("scaffold:navigate", { tabId, url }),
   /** What the page declares about itself: description, social card, JSON-LD. */
   readPageMeta: (tabId) => ipcRenderer.invoke("scaffold:read-page-meta", { tabId }),
+  readArticle: (tabId) => ipcRenderer.invoke("scaffold:read-article", { tabId }),
+
+  getAdblockState: () => ipcRenderer.invoke("scaffold:adblock-state"),
+  setAdblockEnabled: (enabled) => ipcRenderer.invoke("scaffold:adblock-enabled", { enabled }),
+  setAdblockSite: (host, allowed) =>
+    ipcRenderer.invoke("scaffold:adblock-site", { host, allowed }),
+  setAdblockLists: (lists) => ipcRenderer.invoke("scaffold:adblock-lists", { lists }),
+  refreshAdblock: () => ipcRenderer.invoke("scaffold:adblock-refresh"),
+  onAdblock: (handler) => {
+    const listener = (_event, state) => handler(state);
+    ipcRenderer.on("scaffold:adblock", listener);
+    return () => ipcRenderer.removeListener("scaffold:adblock", listener);
+  },
   relaunch: () => ipcRenderer.send("scaffold:relaunch"),
   closeTab: (tabId) => ipcRenderer.send("scaffold:close-tab", { tabId }),
   viewAction: (tabId, action) => ipcRenderer.send("scaffold:view-action", { tabId, action }),

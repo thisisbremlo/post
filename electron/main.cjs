@@ -359,6 +359,9 @@ function boundsOf(rect) {
 function applyLayout(layout) {
   if (!win) return;
   lastLayout = layout;
+  // The blocker follows the page in front, so a paused site is the exception
+  // only while it is the one being read.
+  setAdblockHost(layout.activeTab?.url ?? "");
   if (overlayOpen) return;
 
   const active = layout.activeTab && !isInternalUrl(layout.activeTab.url) ? layout.activeTab : null;
@@ -417,9 +420,11 @@ function adblockCacheAge() {
 function readAdblockCache() {
   const file = adblockCachePath();
   try {
+    const age = adblockCacheAge();
     return {
       blocker: ElectronBlocker.deserialize(fs.readFileSync(file)),
-      fresh: adblockCacheAge() < ADBLOCK_TTL,
+      fresh: age < ADBLOCK_TTL,
+      updatedAt: Number.isFinite(age) ? Date.now() - age : null,
     };
   } catch {
     try {
@@ -435,48 +440,146 @@ function readAdblockCache() {
 let adblocker = null;
 /** @type {Promise<void> | null} */
 let adblockRefresh = null;
+let adblockEnabled = true;
+/** @type {Set<string>} */
+let adblockAllowed = new Set();
+let adblockBlocking = false;
+let adblockBlocked = 0;
+let adblockActiveHost = "";
+/** @type {string[]} */
+let adblockLists = [];
+/** @type {number | null} */
+let adblockUpdatedAt = null;
+/** @type {string | null} */
+let adblockError = null;
+/** @type {NodeJS.Timeout | null} */
+let adblockSendTimer = null;
 
-/**
- * Electron 33 predates `registerPreloadScript`, which the blocker uses for its
- * cosmetic filters. The older Session API can still register the preload.
- */
-function addPreloadScriptCompatibility(target) {
-  if (typeof target.registerPreloadScript === "function") return;
-  if (typeof target.setPreloads !== "function" || typeof target.getPreloads !== "function") {
-    return;
+const adblockConfigPath = () => path.join(app.getPath("userData"), "adblock.json");
+
+function loadAdblockConfig() {
+  try {
+    const stored = JSON.parse(fs.readFileSync(adblockConfigPath(), "utf8"));
+    adblockEnabled = stored?.enabled !== false;
+    adblockAllowed = new Set(
+      Array.isArray(stored?.allow)
+        ? stored.allow
+            .filter((host) => typeof host === "string" && host.trim())
+            .map((host) => host.trim().toLowerCase())
+        : [],
+    );
+    adblockLists = Array.isArray(stored?.lists)
+      ? stored.lists.map(normalizeListUrl).filter(Boolean).slice(0, 12)
+      : [];
+  } catch {
+    adblockEnabled = true;
+    adblockAllowed = new Set();
+    adblockLists = [];
   }
+}
 
-  const ids = new Map();
-  let nextId = 0;
+function saveAdblockConfig() {
+  try {
+    fs.writeFileSync(
+      adblockConfigPath(),
+      JSON.stringify(
+        { enabled: adblockEnabled, allow: [...adblockAllowed], lists: adblockLists },
+        null,
+        2,
+      ),
+    );
+  } catch (error) {
+    console.warn("adblocker: could not save preferences:", error.message);
+  }
+}
 
-  target.registerPreloadScript = ({ filePath }) => {
-    const id = `adblocker-preload-${++nextId}`;
-    ids.set(id, filePath);
-    const preloads = target.getPreloads();
-    if (!preloads.includes(filePath)) target.setPreloads([...preloads, filePath]);
-    return id;
-  };
+/** The hostname as people read it, without the www every site carries anyway. */
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
 
-  target.unregisterPreloadScript = (id) => {
-    const filePath = ids.get(id);
-    if (!filePath) return;
-    ids.delete(id);
-    target.setPreloads(target.getPreloads().filter((entry) => entry !== filePath));
+function normalizeListUrl(value) {
+  try {
+    const parsed = new URL(String(value).trim());
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function adblockState() {
+  return {
+    enabled: adblockEnabled,
+    blocked: adblockBlocked,
+    updatedAt: adblockUpdatedAt,
+    allow: [...adblockAllowed].sort(),
+    lists: [...adblockLists],
+    activeHost: adblockActiveHost,
+    paused: Boolean(adblockActiveHost) && adblockAllowed.has(adblockActiveHost),
+    ready: adblocker !== null,
+    error: adblockError,
   };
 }
 
-function enableAdblocker(blocker) {
-  const target = session.fromPartition(PARTITION);
-  addPreloadScriptCompatibility(target);
-  const previous = adblocker;
-  if (previous) previous.disableBlockingInSession(target);
-  try {
-    blocker.enableBlockingInSession(target);
-    adblocker = blocker;
-  } catch (error) {
-    if (previous) previous.enableBlockingInSession(target);
-    throw error;
+function sendAdblock(immediate = false) {
+  const send = () => {
+    adblockSendTimer = null;
+    if (!chromeView || chromeView.webContents.isDestroyed()) return;
+    chromeView.webContents.send("scaffold:adblock", adblockState());
+  };
+  if (immediate) {
+    if (adblockSendTimer) clearTimeout(adblockSendTimer);
+    send();
+    return;
   }
+  if (adblockSendTimer) return;
+  adblockSendTimer = setTimeout(send, 250);
+  adblockSendTimer.unref?.();
+}
+
+function attachAdblockEvents(blocker) {
+  blocker.on("request-blocked", () => {
+    adblockBlocked += 1;
+    sendAdblock();
+  });
+}
+
+/** One place decides whether the current host is under the blocker. */
+function syncAdblock() {
+  if (!adblocker) return;
+  const target = session.fromPartition(PARTITION);
+  const shouldBlock =
+    adblockEnabled && (!adblockActiveHost || !adblockAllowed.has(adblockActiveHost));
+  if (shouldBlock === adblockBlocking) return;
+  try {
+    if (shouldBlock) {
+      adblocker.enableBlockingInSession(target);
+      adblockBlocking = true;
+    } else {
+      adblocker.disableBlockingInSession(target);
+      adblockBlocking = false;
+    }
+    adblockError = null;
+  } catch (error) {
+    adblockError = error.message;
+    console.warn("adblocker: could not change state:", error.message);
+  }
+  sendAdblock(true);
+}
+
+function setAdblockHost(url) {
+  const host = hostOf(url);
+  if (host === adblockActiveHost) return;
+  adblockActiveHost = host;
+  syncAdblock();
+  // A switch between two allowed sites changes no blocking state, but the
+  // chrome still needs the new hostname for its paused label.
+  sendAdblock(true);
+  if (adblockEnabled && !adblocker) void refreshAdblocker();
 }
 
 function withTimeout(promise, ms) {
@@ -488,16 +591,45 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-async function refreshAdblocker() {
-  if (adblockRefresh) return adblockRefresh;
+async function refreshAdblocker(force = false) {
+  if (adblockRefresh) {
+    await adblockRefresh;
+    if (!force) return;
+    return refreshAdblocker(true);
+  }
+  if (!force && adblocker && adblockCacheAge() < ADBLOCK_TTL) return;
 
   adblockRefresh = (async () => {
+    let extraError = null;
     try {
-      const blocker = await withTimeout(
+      let blocker = await withTimeout(
         ElectronBlocker.fromPrebuiltAdsAndTracking(fetch),
         ADBLOCK_TIMEOUT,
       );
-      enableAdblocker(blocker);
+      if (adblockLists.length > 0) {
+        try {
+          const extra = await withTimeout(
+            ElectronBlocker.fromLists(fetch, adblockLists),
+            ADBLOCK_TIMEOUT,
+          );
+          blocker = ElectronBlocker.merge([blocker, extra]);
+        } catch (error) {
+          // A broken personal list must never take the built-in lists down.
+          extraError = `extra list: ${error.message}`;
+          console.warn("adblocker: could not load an extra list:", error.message);
+        }
+      }
+      const target = session.fromPartition(PARTITION);
+      if (adblockBlocking && adblocker) {
+        try {
+          adblocker.disableBlockingInSession(target);
+        } catch {
+          /* the replacement below is what matters */
+        }
+      }
+      adblockBlocking = false;
+      adblocker = blocker;
+      attachAdblockEvents(blocker);
 
       const file = adblockCachePath();
       const temporary = `${file}.${process.pid}.tmp`;
@@ -509,10 +641,15 @@ async function refreshAdblocker() {
         fs.copyFileSync(temporary, file);
         fs.rmSync(temporary, { force: true });
       }
+      adblockUpdatedAt = Date.now();
+      adblockError = extraError;
+      syncAdblock();
     } catch (error) {
+      adblockError = error.message;
       console.warn("adblocker: could not update the lists:", error.message);
     } finally {
       adblockRefresh = null;
+      sendAdblock(true);
     }
   })();
 
@@ -520,17 +657,20 @@ async function refreshAdblocker() {
 }
 
 function startAdblocker() {
+  loadAdblockConfig();
   const cached = readAdblockCache();
   if (cached) {
-    enableAdblocker(cached.blocker);
-    if (!cached.fresh) void refreshAdblocker();
-  } else {
-    void refreshAdblocker();
+    adblocker = cached.blocker;
+    attachAdblockEvents(cached.blocker);
+    adblockUpdatedAt = cached.updatedAt;
   }
+  syncAdblock();
+
+  if (adblockEnabled && (!cached || !cached.fresh)) void refreshAdblocker();
 
   // Lists are weekly; a long-running window checks again every six hours.
   setInterval(() => {
-    if (adblockCacheAge() >= ADBLOCK_TTL) void refreshAdblocker();
+    if (adblockEnabled && adblockCacheAge() >= ADBLOCK_TTL) void refreshAdblocker();
   }, 6 * 60 * 60 * 1000).unref();
 }
 
@@ -721,6 +861,77 @@ ipcMain.handle("scaffold:read-page-meta", async (_event, { tabId } = {}) => {
   } catch {
     return null;
   }
+});
+
+/*
+ * Reader mode is a reading surface, not a second browser: take the article's
+ * own words, leave the navigation and the furniture behind.
+ */
+const READER_SCRIPT = `(() => {
+  const root = document.querySelector("article, main, [role='main']") || document.body;
+  if (!root) return null;
+  const clone = root.cloneNode(true);
+  clone.querySelectorAll("script, style, noscript, nav, header, footer, aside, form, iframe, svg, button, input, select, textarea").forEach((node) => node.remove());
+  const raw = clone.innerText || clone.textContent || "";
+  const text = raw
+    .replace(/[ \\t]+/g, " ")
+    .replace(/\\n[ \\t]*\\n[ \\t]*\\n+/g, "\\n\\n")
+    .trim();
+  return { title: document.title || "", url: location.href, text: text.slice(0, 60000) };
+})()`;
+
+ipcMain.handle("scaffold:read-article", async (_event, { tabId } = {}) => {
+  const contents =
+    tabId === "reference"
+      ? referenceView?.webContents
+      : pageViews.get(tabId)?.view.webContents;
+  if (!contents || contents.isDestroyed()) return null;
+  try {
+    return await contents.executeJavaScript(READER_SCRIPT, true);
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle("scaffold:adblock-state", () => adblockState());
+
+ipcMain.handle("scaffold:adblock-enabled", (_event, { enabled } = {}) => {
+  adblockEnabled = enabled !== false;
+  saveAdblockConfig();
+  syncAdblock();
+  if (adblockEnabled && (!adblocker || adblockCacheAge() >= ADBLOCK_TTL)) {
+    void refreshAdblocker();
+  }
+  return adblockState();
+});
+
+ipcMain.handle("scaffold:adblock-site", (_event, { host, allowed } = {}) => {
+  const key = hostOf(`https://${String(host ?? "")}`);
+  if (key) {
+    if (allowed) adblockAllowed.add(key);
+    else adblockAllowed.delete(key);
+    saveAdblockConfig();
+    syncAdblock();
+  }
+  return adblockState();
+});
+
+ipcMain.handle("scaffold:adblock-lists", async (_event, { lists } = {}) => {
+  const clean = Array.isArray(lists)
+    ? lists
+        .map(normalizeListUrl)
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+  adblockLists = [...new Set(clean)];
+  saveAdblockConfig();
+  await refreshAdblocker(true);
+  return adblockState();
+});
+
+ipcMain.handle("scaffold:adblock-refresh", async () => {
+  await refreshAdblocker(true);
+  return adblockState();
 });
 
 ipcMain.on("scaffold:relaunch", () => {

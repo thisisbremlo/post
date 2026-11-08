@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 
+import { bridge } from "../lib/bridge";
 import { parseDomain } from "../lib/url";
 import { useStore } from "../state/store";
 import type { Reference } from "../state/types";
@@ -21,10 +22,38 @@ export function ReferencePane({
   const { dispatch } = useStore();
   const internal = reference.url.startsWith("scaffold://");
 
+  const snapshot = async () => {
+    if (!bridge) {
+      dispatch({ type: "notice", text: "snapshots need the desktop engine" });
+      return;
+    }
+    const article = await bridge.readArticle("reference");
+    const excerpt = article?.text.replace(/\s+/g, " ").trim().slice(0, 280) ?? "";
+    if (!excerpt) {
+      dispatch({ type: "notice", text: "this reference has no readable text to keep" });
+      return;
+    }
+    dispatch({
+      type: "keep-clip",
+      url: reference.url,
+      title: reference.title,
+      note: `snapshot · ${excerpt}`,
+    });
+  };
+
   return (
     <aside className="reference" ref={containerRef} aria-label="reference pane">
       <header className="reference-head">
         <span className="reference-domain tnum">{parseDomain(reference.url)}</span>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="keep a snapshot on the shelf"
+          title="keep a snapshot on the shelf"
+          onClick={() => void snapshot()}
+        >
+          <Icon name="camera" size={14} />
+        </button>
         <button
           type="button"
           className="icon-btn reference-close"

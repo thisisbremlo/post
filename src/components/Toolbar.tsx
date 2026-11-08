@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import type { AdblockState } from "../lib/bridge";
 import type { UpdateInfo } from "../lib/updates";
 import { useActiveTab, useStore } from "../state/store";
 import { ContextMenu } from "./ContextMenu";
@@ -14,12 +15,14 @@ export function Toolbar({
   onMenuChange,
   update,
   onOpenUpdate,
+  adblock,
 }: {
   onOpenPalette: () => void;
   onOpenTurbo: (box: DOMRect) => void;
   onMenuChange: (open: boolean) => void;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
+  adblock: AdblockState | null;
 }) {
   const { state, dispatch } = useStore();
   const tab = useActiveTab();
@@ -151,6 +154,30 @@ export function Toolbar({
       >
         <Icon name="zap" size={16} />
       </button>
+
+      {adblock && (
+        <button
+          type="button"
+          className={
+            "palette-chip adblock-chip" +
+            (!adblock.enabled ? " is-off" : adblock.paused ? " is-paused" : "")
+          }
+          aria-label="ad blocking status"
+          title={
+            !adblock.enabled
+              ? "ad blocking is off — open settings to turn it on"
+              : adblock.paused
+                ? `paused on ${adblock.activeHost} — open settings to manage exceptions`
+                : `Ghostery lists: ${adblock.blocked} requests blocked this session`
+          }
+          onClick={() => dispatch({ type: "navigate", url: "scaffold://settings" })}
+        >
+          <Icon name="shield" size={13} />
+          <span className="tnum">
+            {!adblock.enabled ? "off" : adblock.paused ? "paused" : adblock.blocked}
+          </span>
+        </button>
+      )}
 
       <button
         type="button"

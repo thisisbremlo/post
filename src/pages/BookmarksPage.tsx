@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 
 import { Icon } from "../components/Icon";
+import { parseBookmarksHtml } from "../lib/bookmarks";
 import { displayAddress } from "../lib/url";
 import { useStore } from "../state/store";
 import type { Bookmark } from "../state/types";
@@ -9,6 +11,23 @@ import type { Bookmark } from "../state/types";
 export function BookmarksPage() {
   const { state, dispatch } = useStore();
   const [query, setQuery] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
+
+  const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const items = parseBookmarksHtml(await file.text());
+      if (items.length === 0) {
+        dispatch({ type: "notice", text: "no bookmarks found in that file" });
+        return;
+      }
+      dispatch({ type: "bookmark-import", items });
+    } catch {
+      dispatch({ type: "notice", text: "couldn't read that bookmark file" });
+    }
+  };
 
   const needle = query.trim().toLowerCase();
   const matches = state.bookmarks.filter(
@@ -34,6 +53,24 @@ export function BookmarksPage() {
           <div>
             <h1 className="page-title">bookmarks</h1>
             <p className="page-meta">the pages you keep, without a note</p>
+          </div>
+          <div className="page-actions">
+            <input
+              ref={importRef}
+              type="file"
+              accept=".html,.htm,text/html"
+              hidden
+              onChange={(event) => void importFile(event)}
+            />
+            <button
+              type="button"
+              className="text-action"
+              title="import a Chrome, Firefox or Safari bookmark file"
+              onClick={() => importRef.current?.click()}
+            >
+              <Icon name="upload" size={14} />
+              import html
+            </button>
           </div>
         </header>
 

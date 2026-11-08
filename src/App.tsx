@@ -8,6 +8,7 @@ import { KeepDialog } from "./components/KeepDialog";
 import { MetaSheet } from "./components/MetaSheet";
 import { Palette } from "./components/Palette";
 import { PageView } from "./components/PageView";
+import { ReaderDialog } from "./components/ReaderDialog";
 import { ReferencePane } from "./components/ReferencePane";
 import { ShelfBar } from "./components/ShelfBar";
 import { TabStrip } from "./components/TabStrip";
@@ -16,6 +17,8 @@ import { TurboNote } from "./components/TurboNote";
 import { UpdateDialog } from "./components/UpdateDialog";
 import {
   bridge,
+  type AdblockState,
+  type Article,
   type BrowserCommand,
   type PageMeta,
   type ViewRect,
@@ -86,11 +89,15 @@ export function App() {
   const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
+  const [reader, setReader] = useState<Article | null>(null);
+  const [adblock, setAdblock] = useState<AdblockState | null>(null);
 
   const stageRef = useRef<HTMLElement>(null);
   const referenceRef = useRef<HTMLElement>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const adblockRef = useRef(adblock);
+  adblockRef.current = adblock;
 
   const keepTab = state.tabs.find((tab) => tab.id === keepTabId) ?? activeTab;
   const bookmarkTab = state.tabs.find((tab) => tab.id === bookmarkTabId) ?? null;
@@ -100,6 +107,7 @@ export function App() {
     updateOpen ||
     bookmarkTab !== null ||
     metaSheet !== null ||
+    reader !== null ||
     menu !== null ||
     turbo !== null ||
     toolsOpen;
@@ -136,6 +144,21 @@ export function App() {
     setBookmarkTabId(tab.id);
   };
 
+  // Reader mode reads the page in its own view, then puts the words on a sheet.
+  const openReader = async (tab: Tab) => {
+    if (!bridge) {
+      dispatch({ type: "notice", text: "reader mode needs the desktop engine" });
+      return;
+    }
+    if (internalPageOf(tab.url) !== null) return;
+    const article = await bridge.readArticle(tab.id);
+    if (!article || !article.text.trim()) {
+      dispatch({ type: "notice", text: "this page has no readable article" });
+      return;
+    }
+    setReader({ ...article, title: article.title || tab.title });
+  };
+
   // ⌘⇧D, and the toolbar button, both open the same one-line note.
   useEffect(() => {
     const open = () => setKeepOpen(true);
@@ -152,6 +175,24 @@ export function App() {
     window.addEventListener("scaffold:bookmark", open);
     return () => window.removeEventListener("scaffold:bookmark", open);
   }, [dispatch]);
+
+  // The blocker lives in main's session; the chrome only reads its state and
+  // asks for the two changes a reader can make.
+  useEffect(() => {
+    if (!bridge) return;
+    let live = true;
+    bridge
+      .getAdblockState()
+      .then((next) => {
+        if (live) setAdblock(next);
+      })
+      .catch(() => undefined);
+    const off = bridge.onAdblock(setAdblock);
+    return () => {
+      live = false;
+      off();
+    };
+  }, []);
 
   // The shell reads main through the checkout's own git remote, so a private
   // repo needs no token; the harness asks the public feed instead.
@@ -220,6 +261,7 @@ export function App() {
         setUpdateOpen(false);
         setBookmarkTabId(null);
         setMetaSheet(null);
+        setReader(null);
         return;
       }
       if (!mod) return;
@@ -490,6 +532,39 @@ export function App() {
           setMenu(null);
         },
       });
+
+      if (bridge && internalPageOf(tab.url) === null) {
+        const host = parseDomain(tab.url);
+        const paused = Boolean(host && adblockRef.current?.allow.includes(host));
+        items.push({
+          id: "reader",
+          label: "reader mode",
+          icon: "reader",
+          separatorBefore: true,
+          onSelect: () => {
+            setMenu(null);
+            void openReader(tab);
+          },
+        });
+        if (host) {
+          items.push({
+            id: "adblock-site",
+            label: paused
+              ? "resume ad blocking on this site"
+              : "pause ad blocking on this site",
+            icon: "shield",
+            onSelect: async () => {
+              setMenu(null);
+              const next = await bridge!.setAdblockSite(host, !paused);
+              setAdblock(next);
+              dispatch({
+                type: "notice",
+                text: next.paused ? `paused on ${host}` : `blocking ${host} again`,
+              });
+            },
+          });
+        }
+      }
 
       if (current.tabs.length > 1) {
         items.push({
@@ -906,6 +981,7 @@ export function App() {
         onMenuChange={setToolsOpen}
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
+        adblock={adblock}
       />
 
       <BookmarksBar />
@@ -966,6 +1042,7 @@ export function App() {
           onClose={() => setMetaSheet(null)}
         />
       )}
+      {reader && <ReaderDialog article={reader} onClose={() => setReader(null)} />}
     </div>
   );
 }

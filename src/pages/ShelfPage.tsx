@@ -56,8 +56,17 @@ function NoteField({ page, compact = false }: { page: KeptPage; compact?: boolea
 
 export function ShelfPage() {
   const { state, dispatch } = useStore();
+  const [query, setQuery] = useState("");
   const withNotes = state.shelf.filter((page) => page.note.trim().length > 0).length;
   const ratio = state.shelf.length > 0 ? Math.round((withNotes / state.shelf.length) * 100) : 0;
+  const needle = query.trim().toLowerCase();
+  const pages = state.shelf.filter(
+    (page) =>
+      !needle ||
+      page.title.toLowerCase().includes(needle) ||
+      page.url.toLowerCase().includes(needle) ||
+      page.note.toLowerCase().includes(needle),
+  );
 
   const exportShelf = () => {
     downloadMarkdown(`scaffold-shelf-${fileStamp(Date.now())}.md`, shelfToMarkdown(state.shelf));
@@ -89,8 +98,26 @@ export function ShelfPage() {
             Nothing kept yet. Press ⌘⇧D on a page worth remembering, and say why in one line.
           </p>
         ) : (
-          <div className="catalogue">
-            {state.shelf.map((page) => (
+          <>
+            <div className="bookmark-search page-search">
+              <Icon name="search" size={14} />
+              <input
+                className="bookmark-search-input"
+                value={query}
+                placeholder="search the shelf"
+                aria-label="search the shelf"
+                spellCheck={false}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <span className="bookmark-search-count tnum">
+                {pages.length} of {state.shelf.length}
+              </span>
+            </div>
+            {pages.length === 0 ? (
+              <p className="empty">Nothing on the shelf matches “{query.trim()}”.</p>
+            ) : (
+              <div className="catalogue">
+                {pages.map((page) => (
               <article className="catalogue-card" key={page.id}>
                 <div className="catalogue-top">
                   <span className="catalogue-domain tnum">{parseDomain(page.url)}</span>
@@ -118,9 +145,11 @@ export function ShelfPage() {
                 )}
                 <NoteField page={page} />
                 <p className="catalogue-foot tnum">kept {shortDate(page.keptAt)}</p>
-              </article>
-            ))}
-          </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -119,12 +119,14 @@ export type Action =
   | { type: "unhold" }
   | { type: "shelf-bar"; open: boolean }
   | { type: "save-sitting"; name: string }
+  | { type: "update-sitting"; id: string }
   | { type: "restore-sitting"; id: string }
   | { type: "delete-sitting"; id: string }
   | { type: "clear-history" }
   | { type: "note-add"; text: string }
   | { type: "note-remove"; id: string }
   | { type: "bookmark-add"; url: string; title: string; folder?: string | null }
+  | { type: "bookmark-import"; items: { url: string; title: string; folder?: string | null }[] }
   | { type: "bookmark-update"; id: string; title?: string; folder?: string | null }
   | { type: "bookmark-remove"; id: string }
   | { type: "settings"; settings: Partial<Settings> }
@@ -500,6 +502,23 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
       };
     }
 
+    case "update-sitting": {
+      const sitting = state.sittings.find((item) => item.id === action.id);
+      if (!sitting) return state;
+      const tabs = state.tabs.map((tab) => ({
+        url: tab.url,
+        title: tab.title,
+        group: state.groups.find((group) => group.id === tab.groupId)?.name ?? null,
+      }));
+      return {
+        ...state,
+        sittings: state.sittings.map((item) =>
+          item.id === action.id ? { ...item, tabs } : item,
+        ),
+        notice: `updated ${sitting.name} — ${tabs.length} ${tabs.length === 1 ? "tab" : "tabs"}`,
+      };
+    }
+
     case "restore-sitting": {
       const sitting = state.sittings.find((item) => item.id === action.id);
       if (!sitting || sitting.tabs.length === 0) return state;
@@ -553,6 +572,31 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         addedAt: Date.now(),
       };
       return { ...state, bookmarks: [bookmark, ...state.bookmarks], notice: "bookmarked" };
+    }
+
+    case "bookmark-import": {
+      const known = new Set(state.bookmarks.map((bookmark) => bookmark.url));
+      const additions: Bookmark[] = [];
+      for (const item of action.items) {
+        const url = item.url.trim();
+        if (!url || internalPageOf(url) || known.has(url)) continue;
+        known.add(url);
+        additions.push({
+          id: uid(),
+          url,
+          title: item.title.trim() || titleFor(url),
+          folder: item.folder?.trim() || null,
+          addedAt: Date.now(),
+        });
+      }
+      if (additions.length === 0) {
+        return { ...state, notice: "no new bookmarks to import" };
+      }
+      return {
+        ...state,
+        bookmarks: [...additions, ...state.bookmarks],
+        notice: `imported ${additions.length} ${additions.length === 1 ? "bookmark" : "bookmarks"}`,
+      };
     }
 
     case "bookmark-update":

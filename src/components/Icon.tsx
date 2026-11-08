@@ -4,9 +4,11 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bookmark,
+  BookOpen,
   Check,
   ChevronDown,
   ChevronUp,
+  Camera,
   Clock,
   Copy,
   Download,
@@ -26,12 +28,14 @@ import {
   Quote,
   RotateCw,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Smartphone,
   Star,
   Tablet,
   Trash2,
   Ungroup,
+  Upload,
   Video,
   X,
   Zap,
@@ -74,7 +78,11 @@ export type IconName =
   | "video"
   | "link"
   | "star"
-  | "info";
+  | "info"
+  | "shield"
+  | "camera"
+  | "upload"
+  | "reader";
 
 /** One set, one weight. The names are ours; the drawings are Lucide's. */
 const ICONS: Record<IconName, LucideIcon> = {
@@ -114,6 +122,10 @@ const ICONS: Record<IconName, LucideIcon> = {
   video: Video,
   link: Link,
   star: Star,
+  shield: ShieldCheck,
+  camera: Camera,
+  upload: Upload,
+  reader: BookOpen,
 };
 
 export function Icon({
