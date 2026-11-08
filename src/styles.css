@@ -4126,6 +4126,153 @@ html.is-overlay .native-surface {
   font-size: 12.5px;
 }
 
+/* the update editor */
+
+.update-dialog {
+  width: min(600px, calc(100vw - 32px));
+}
+
+.update-dialog-body {
+  gap: 14px;
+}
+
+.update-dialog-intro {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.update-changes {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--cream-soft);
+}
+
+.update-changes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.update-changes-title {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.update-changes-count {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.update-changes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.update-changes-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--rule-soft);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.update-changes-list li:first-child {
+  border-top: 0;
+}
+
+.update-change-index {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 6px;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+.update-status {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.update-fail {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  color: var(--danger, #9a3b28);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.update-fail p {
+  margin: 0;
+}
+
+.update-dialog .update-log {
+  border-color: var(--rule);
+  background: var(--cream-soft);
+  color: var(--danger, #9a3b28);
+}
+
+.update-dialog .update-log:hover {
+  border-color: var(--rule);
+  background: var(--cream-deep);
+  color: var(--danger, #9a3b28);
+}
+
+.update-dialog .setting-action:disabled,
+.update-dialog .setting-action:disabled:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--sheet);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.update-dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-later {
+  height: 30px;
+  padding: 0 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.update-later:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .update-dialog-buttons {
+    width: 100%;
+  }
+
+  .update-dialog-buttons .setting-action {
+    flex: 1;
+  }
+}
+
 /* ---------- updates page ---------- */
 
 .updates.page {
