@@ -3423,74 +3423,196 @@ svg {
   }
 }
 
-/* the star's editor, built on the keep dialog */
+/* the bookmark editor, in the settings language */
 
 .bookmark-dialog {
-  width: min(470px, calc(100vw - 40px));
+  width: min(560px, calc(100vw - 32px));
+  padding: 0;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.bookmark-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.bookmark-dialog-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+.bookmark-dialog-heading {
+  flex: 1;
+  min-width: 0;
 }
 
 .bookmark-kicker {
-  margin: 0 0 10px;
-  color: var(--ink-3);
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 500;
 }
 
-.bookmark-fields {
+.bookmark-dialog-title {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.bookmark-close {
   display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 8px;
+  background: var(--cream-soft);
+  color: var(--ink-3);
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease),
+    color 140ms var(--ease);
+}
+
+.bookmark-close:hover {
+  border-color: var(--rule);
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.bookmark-source {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin: 20px 0 14px;
+  margin: 16px 24px 0;
+  padding: 11px 12px;
+  border: 1px solid var(--rule-soft);
+  border-radius: 10px;
+  background: var(--cream-soft);
+}
+
+.bookmark-source-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--ink-3);
+}
+
+.bookmark-source-copy {
+  min-width: 0;
+}
+
+.bookmark-source-title {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-source-url {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-form {
+  display: grid;
+  gap: 16px;
+  padding: 20px 24px 22px;
 }
 
 .bookmark-field {
   display: grid;
-  gap: 5px;
+  gap: 6px;
 }
 
 .bookmark-label {
-  color: var(--ink-3);
-  font-size: 10.5px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.bookmark-input {
-  width: 100%;
+.bookmark-field-note {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.bookmark-dialog .setting-input {
+  height: 38px;
+  font-size: 13px;
 }
 
 .bookmark-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--rule);
+  background: var(--cream-soft);
+}
+
+.bookmark-actions-meta {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding-top: 14px;
-  border-top: 1px solid var(--rule);
+  min-width: 0;
 }
 
 .bookmark-hint {
-  margin-left: auto;
   color: var(--ink-3);
   font-size: 10.5px;
+  line-height: 1.4;
 }
 
-.bookmark-save {
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--cream-soft);
-  font-size: 12px;
-}
-
-.bookmark-save:hover {
-  background: var(--accent);
-}
-
-.bookmark-delete {
-  padding: 4px 0;
+.bookmark-actions .bookmark-delete {
+  border-color: var(--rule);
+  background: var(--cream-soft);
   color: var(--danger, #9a3b28);
-  font-size: 11.5px;
 }
 
-.bookmark-delete:hover {
-  color: var(--ink);
+.bookmark-actions .bookmark-delete:hover {
+  border-color: var(--rule);
+  background: var(--cream-deep);
+  color: var(--danger, #9a3b28);
+}
+
+@media (max-width: 560px) {
+  .bookmark-dialog-head {
+    padding: 20px 20px 16px;
+  }
+
+  .bookmark-source {
+    margin: 14px 20px 0;
+  }
+
+  .bookmark-form {
+    padding: 18px 20px 20px;
+  }
+
+  .bookmark-actions {
+    padding: 14px 20px 16px;
+  }
 }
 
 /* the manager */
