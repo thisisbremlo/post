@@ -11,11 +11,10 @@
 #include "base/json/json_writer.h"
 #include "base/strings/utf_string_conversions.h"
 #include "chrome/browser/profiles/profile.h"
-#include "chrome/browser/ui/browser.h"
-#include "chrome/browser/ui/browser_commands.h"
-#include "chrome/browser/ui/browser_finder.h"
+#include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "components/prefs/pref_service.h"
+#include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_ui.h"
@@ -129,8 +128,8 @@ void PostHandler::HandleCall(const base::Value::List& args) {
     result = "null";
   }
 
-  CallJavascriptFunctionUnsafe("postReceive", base::Value(request_id),
-                               base::Value(result));
+  web_ui()->CallJavascriptFunctionUnsafe(
+      "postReceive", base::Value(request_id), base::Value(result));
 }
 
 std::string PostHandler::Tabs() {
@@ -152,24 +151,22 @@ void PostHandler::Activate(int index) {
 }
 
 void PostHandler::Close(int index) {
-  Browser* browser = GetBrowser();
   TabStripModel* model = GetTabStripModel();
-  if (!browser || !model || index < 0 || index >= model->count()) {
+  if (!model || index < 0 || index >= model->count()) {
     return;
   }
-  chrome::CloseWebContents(browser, model->GetWebContentsAt(index),
-                           /*add_to_history=*/true);
+  if (content::WebContents* contents = model->GetWebContentsAt(index)) {
+    contents->Close();
+  }
 }
 
 void PostHandler::NewTab(const std::string& url) {
-  Browser* browser = GetBrowser();
-  if (!browser) {
+  BrowserWindowInterface* window = GetWindow();
+  if (!window) {
     return;
   }
-  chrome::NewTab(browser);
-  if (!url.empty()) {
-    Navigate(browser->tab_strip_model()->active_index(), url);
-  }
+  const GURL target = url.empty() ? GURL("chrome://newtab/") : GURL(url);
+  window->OpenGURL(target, WindowOpenDisposition::NEW_FOREGROUND_TAB);
 }
 
 void PostHandler::Navigate(int index, const std::string& url) {
@@ -259,16 +256,21 @@ void PostHandler::SendTabs() {
   if (!model) {
     return;
   }
-  CallJavascriptFunctionUnsafe("postTabs", base::Value(Tabs()));
+  web_ui()->CallJavascriptFunctionUnsafe("postTabs", base::Value(Tabs()));
 }
 
-Browser* PostHandler::GetBrowser() {
-  return chrome::FindBrowserWithTab(web_ui()->GetWebContents());
+BrowserWindowInterface* PostHandler::GetWindow() {
+  content::WebContents* contents = web_ui()->GetWebContents();
+  if (!contents) {
+    return nullptr;
+  }
+  tabs::TabInterface* tab = tabs::TabInterface::MaybeGetFromContents(contents);
+  return tab ? tab->GetBrowserWindowInterface() : nullptr;
 }
 
 TabStripModel* PostHandler::GetTabStripModel() {
-  Browser* browser = GetBrowser();
-  return browser ? browser->tab_strip_model() : nullptr;
+  BrowserWindowInterface* window = GetWindow();
+  return window ? window->GetTabStripModel() : nullptr;
 }
 
 Profile* PostHandler::GetProfile() {

@@ -11,7 +11,7 @@
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
 #include "content/public/browser/web_ui_message_handler.h"
 
-class Browser;
+class BrowserWindowInterface;
 class Profile;
 class TabStripModel;
 
@@ -53,7 +53,7 @@ class PostHandler : public content::WebUIMessageHandler,
   void SendTabs();
 
   // chrome.send lives on a non-const WebUI, so these are non-const too.
-  Browser* GetBrowser();
+  BrowserWindowInterface* GetWindow();
   TabStripModel* GetTabStripModel();
   Profile* GetProfile();
 
