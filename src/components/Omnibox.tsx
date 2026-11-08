@@ -43,11 +43,11 @@ export function Omnibox({ tab }: { tab: Tab }) {
       field.remove();
     }
     if (!written) {
-      dispatch({ type: "notice", text: "couldn't copy — select the address instead" });
+      dispatch({ type: "notice", text: "Couldn't copy. Select the address instead." });
       return;
     }
     setCopied(true);
-    dispatch({ type: "notice", text: "address copied" });
+    dispatch({ type: "notice", text: "Address copied." });
     if (copyTimer.current) window.clearTimeout(copyTimer.current);
     copyTimer.current = window.setTimeout(() => setCopied(false), 1400);
   };
@@ -63,7 +63,6 @@ export function Omnibox({ tab }: { tab: Tab }) {
   }, []);
 
   const internal = internalPageOf(tab.url) !== null;
-  const kept = state.shelf.some((page) => page.url === tab.url);
   const bookmarked = state.bookmarks.some((bookmark) => bookmark.url === tab.url);
 
   const commit = () => {
@@ -83,8 +82,8 @@ export function Omnibox({ tab }: { tab: Tab }) {
         spellCheck={false}
         autoCapitalize="none"
         autoCorrect="off"
-        aria-label="address"
-        placeholder="type an address"
+        aria-label="Address"
+        placeholder="Type an address"
         onChange={(event) => setValue(event.target.value)}
         onFocus={(event) => {
           setEditing(true);
@@ -107,43 +106,33 @@ export function Omnibox({ tab }: { tab: Tab }) {
         }}
       />
       {/*
-       * The shelf sits in the address, but it says what it does: a word, not a
-       * keycap. Kept pages say so, and open the note again instead of re-saving.
+       * Keeping is bookmarking: one word in the address, filled once the page
+       * is saved. A saved page opens its bookmark editor instead of saving a
+       * second copy.
        */}
       <div className="omnibox-actions">
         {!internal && (
           <button
             type="button"
-            className={"omnibox-save" + (kept ? " is-kept" : "")}
-            aria-label={kept ? "on the shelf — edit the note" : "keep this page on the shelf"}
-            title={kept ? "on the shelf — edit the note (⌘⇧D)" : "keep this page on the shelf (⌘⇧D)"}
-            onClick={() => window.dispatchEvent(new CustomEvent("scaffold:keep"))}
+            className={"omnibox-save" + (bookmarked ? " is-bookmarked" : "")}
+            aria-label={bookmarked ? "Edit this bookmark" : "Save this page as a bookmark"}
+            aria-pressed={bookmarked}
+            title={bookmarked ? "Edit this bookmark (⌘D)" : "Save this page as a bookmark (⌘D)"}
+            onClick={() => window.dispatchEvent(new CustomEvent("scaffold:bookmark"))}
           >
             <Icon name="bookmark" size={12} />
-            <span className="omnibox-save-word">{kept ? "kept" : "keep"}</span>
+            <span className="omnibox-save-word">{bookmarked ? "Saved" : "Keep"}</span>
           </button>
         )}
         <button
           type="button"
           className={"omnibox-copy" + (copied ? " is-copied" : "")}
-          aria-label={copied ? "address copied" : "copy address"}
-          title={copied ? "copied" : "copy address"}
+          aria-label={copied ? "Address copied" : "Copy address"}
+          title={copied ? "Copied" : "Copy address"}
           onClick={copyAddress}
         >
           <Icon name={copied ? "check" : "copy"} size={13} />
         </button>
-        {!internal && (
-          <button
-            type="button"
-            className={"omnibox-star" + (bookmarked ? " is-bookmarked" : "")}
-            aria-label={bookmarked ? "edit this bookmark" : "bookmark this page"}
-            aria-pressed={bookmarked}
-            title={bookmarked ? "edit this bookmark (⌘D)" : "bookmark this page (⌘D)"}
-            onClick={() => window.dispatchEvent(new CustomEvent("scaffold:bookmark"))}
-          >
-            <Icon name="star" size={14} />
-          </button>
-        )}
       </div>
     </div>
   );

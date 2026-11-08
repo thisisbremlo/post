@@ -572,7 +572,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         folder: action.folder?.trim() || null,
         addedAt: Date.now(),
       };
-      return { ...state, bookmarks: [bookmark, ...state.bookmarks], notice: "bookmarked" };
+      return { ...state, bookmarks: [bookmark, ...state.bookmarks], notice: "Bookmark saved." };
     }
 
     case "bookmark-import": {
@@ -591,12 +591,12 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
         });
       }
       if (additions.length === 0) {
-        return { ...state, notice: "no new bookmarks to import" };
+        return { ...state, notice: "No new bookmarks to import." };
       }
       return {
         ...state,
         bookmarks: [...additions, ...state.bookmarks],
-        notice: `imported ${additions.length} ${additions.length === 1 ? "bookmark" : "bookmarks"}`,
+        notice: `Imported ${additions.length} ${additions.length === 1 ? "bookmark" : "bookmarks"}.`,
       };
     }
 
@@ -619,7 +619,7 @@ export function reducer(state: ScaffoldState, action: Action): ScaffoldState {
       return {
         ...state,
         bookmarks: state.bookmarks.filter((bookmark) => bookmark.id !== action.id),
-        notice: "bookmark removed",
+        notice: "Bookmark removed.",
       };
 
     case "settings":
