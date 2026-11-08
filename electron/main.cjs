@@ -11,9 +11,12 @@ const {
 const path = require("node:path");
 const fs = require("node:fs");
 const { spawn } = require("node:child_process");
+const { ElectronBlocker } = require("@ghostery/adblocker-electron");
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
 const PARTITION = "persist:scaffold";
+const ADBLOCK_TTL = 7 * 24 * 60 * 60 * 1000;
+const ADBLOCK_TIMEOUT = 30_000;
 
 /** Internal pages are drawn by the chrome; a native view would paint over them. */
 const isInternalUrl = (url) => typeof url === "string" && url.startsWith("scaffold://");
@@ -398,6 +401,139 @@ function destroyTab(tabId) {
   pageViews.delete(tabId);
 }
 
+/* --------------------------------------------------------------- adblocker */
+
+const adblockCachePath = () => path.join(app.getPath("userData"), "adblocker.bin");
+
+/** A stale cache stays usable until the new lists arrive. */
+function adblockCacheAge() {
+  try {
+    return Date.now() - fs.statSync(adblockCachePath()).mtimeMs;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+function readAdblockCache() {
+  const file = adblockCachePath();
+  try {
+    return {
+      blocker: ElectronBlocker.deserialize(fs.readFileSync(file)),
+      fresh: adblockCacheAge() < ADBLOCK_TTL,
+    };
+  } catch {
+    try {
+      fs.rmSync(file, { force: true });
+    } catch {
+      /* a cache that cannot be removed is fetched over next launch */
+    }
+    return null;
+  }
+}
+
+/** @type {import("@ghostery/adblocker-electron").ElectronBlocker | null} */
+let adblocker = null;
+/** @type {Promise<void> | null} */
+let adblockRefresh = null;
+
+/**
+ * Electron 33 predates `registerPreloadScript`, which the blocker uses for its
+ * cosmetic filters. The older Session API can still register the preload.
+ */
+function addPreloadScriptCompatibility(target) {
+  if (typeof target.registerPreloadScript === "function") return;
+  if (typeof target.setPreloads !== "function" || typeof target.getPreloads !== "function") {
+    return;
+  }
+
+  const ids = new Map();
+  let nextId = 0;
+
+  target.registerPreloadScript = ({ filePath }) => {
+    const id = `adblocker-preload-${++nextId}`;
+    ids.set(id, filePath);
+    const preloads = target.getPreloads();
+    if (!preloads.includes(filePath)) target.setPreloads([...preloads, filePath]);
+    return id;
+  };
+
+  target.unregisterPreloadScript = (id) => {
+    const filePath = ids.get(id);
+    if (!filePath) return;
+    ids.delete(id);
+    target.setPreloads(target.getPreloads().filter((entry) => entry !== filePath));
+  };
+}
+
+function enableAdblocker(blocker) {
+  const target = session.fromPartition(PARTITION);
+  addPreloadScriptCompatibility(target);
+  const previous = adblocker;
+  if (previous) previous.disableBlockingInSession(target);
+  try {
+    blocker.enableBlockingInSession(target);
+    adblocker = blocker;
+  } catch (error) {
+    if (previous) previous.enableBlockingInSession(target);
+    throw error;
+  }
+}
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("list download timed out")), ms);
+    timer.unref?.();
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function refreshAdblocker() {
+  if (adblockRefresh) return adblockRefresh;
+
+  adblockRefresh = (async () => {
+    try {
+      const blocker = await withTimeout(
+        ElectronBlocker.fromPrebuiltAdsAndTracking(fetch),
+        ADBLOCK_TIMEOUT,
+      );
+      enableAdblocker(blocker);
+
+      const file = adblockCachePath();
+      const temporary = `${file}.${process.pid}.tmp`;
+      fs.writeFileSync(temporary, blocker.serialize());
+      try {
+        fs.renameSync(temporary, file);
+      } catch {
+        // Windows cannot always replace an existing file with rename.
+        fs.copyFileSync(temporary, file);
+        fs.rmSync(temporary, { force: true });
+      }
+    } catch (error) {
+      console.warn("adblocker: could not update the lists:", error.message);
+    } finally {
+      adblockRefresh = null;
+    }
+  })();
+
+  return adblockRefresh;
+}
+
+function startAdblocker() {
+  const cached = readAdblockCache();
+  if (cached) {
+    enableAdblocker(cached.blocker);
+    if (!cached.fresh) void refreshAdblocker();
+  } else {
+    void refreshAdblocker();
+  }
+
+  // Lists are weekly; a long-running window checks again every six hours.
+  setInterval(() => {
+    if (adblockCacheAge() >= ADBLOCK_TTL) void refreshAdblocker();
+  }, 6 * 60 * 60 * 1000).unref();
+}
+
 /* ------------------------------------------------------------------- shell */
 
 function createWindow() {
@@ -473,6 +609,11 @@ app.whenReady().then(async () => {
     notify({ kind: "download", title: item.getFilename() });
   });
 
+  try {
+    startAdblocker();
+  } catch (error) {
+    console.warn("adblocker: could not start:", error.message);
+  }
   applyMenu();
   createWindow();
 
