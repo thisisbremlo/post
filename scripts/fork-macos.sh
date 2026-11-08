@@ -71,7 +71,7 @@ echo "Building the desk into the overlay…"
 cd "$ROOT"
 npm run fork:assets
 
-echo "Applying the overlay to $SRC…"
+echo "Applying the overlay to ${SRC}"
 python3 chromium/fork/integrate.py --src "$SRC"
 
 cd "$SRC"
