@@ -58,14 +58,14 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="keep bookmark-dialog" role="dialog" aria-modal="true" aria-label="bookmark">
-        <p className="bookmark-kicker">{existing ? "bookmark" : "new bookmark"}</p>
+      <div className="keep bookmark-dialog" role="dialog" aria-modal="true" aria-label="Bookmark">
+        <p className="bookmark-kicker">{existing ? "Bookmark" : "New Bookmark"}</p>
         <p className="keep-title">{tab.title}</p>
         <p className="keep-address tnum">{displayAddress(tab.url)}</p>
 
         <div className="bookmark-fields">
           <label className="bookmark-field">
-            <span className="bookmark-label">name</span>
+            <span className="bookmark-label">Name</span>
             <input
               ref={nameRef}
               className="keep-note bookmark-input"
@@ -75,12 +75,12 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
             />
           </label>
           <label className="bookmark-field">
-            <span className="bookmark-label">folder</span>
+            <span className="bookmark-label">Folder</span>
             <input
               className="keep-note bookmark-input"
               value={folder}
               list="bookmark-folders"
-              placeholder="bookmarks bar"
+              placeholder="Bookmarks Bar"
               onChange={(event) => setFolder(event.target.value)}
               onKeyDown={onKeyDown}
             />
@@ -95,12 +95,12 @@ export function BookmarkDialog({ tab, onClose }: { tab: Tab; onClose: () => void
         <div className="bookmark-actions">
           {existing && (
             <button type="button" className="bookmark-delete" onClick={remove}>
-              remove
+              Remove
             </button>
           )}
-          <span className="bookmark-hint tnum">↵ save · esc close</span>
+          <span className="bookmark-hint tnum">↵ Save · Esc to Close</span>
           <button type="button" className="bookmark-save" onClick={save}>
-            done
+            Save
           </button>
         </div>
       </div>

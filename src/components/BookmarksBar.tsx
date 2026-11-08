@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 /** The flat part of Chrome's bar: root bookmarks first, then folders. */
 export function BookmarksBar() {
   const { state, dispatch } = useStore();
-  if (!state.settings.bookmarksBar || state.bookmarks.length === 0) return null;
+  if (!state.settings.bookmarksBar) return null;
 
   const root = state.bookmarks.filter((bookmark) => !bookmark.folder);
   const folders = [
@@ -14,9 +14,15 @@ export function BookmarksBar() {
         .filter((name): name is string => Boolean(name)),
     ),
   ];
+  const empty = root.length === 0 && folders.length === 0;
 
   return (
-    <nav className="bookmarks-bar" aria-label="bookmarks">
+    <nav className="bookmarks-bar" aria-label="Bookmarks">
+      <span className="bookmarks-bar-title">
+        <Icon name="bookmark" size={11} />
+        <span>Bookmarks</span>
+      </span>
+      <span className="bookmarks-bar-rule" aria-hidden="true" />
       {root.map((bookmark) => (
         <button
           key={bookmark.id}
@@ -35,21 +41,25 @@ export function BookmarksBar() {
           key={folder}
           type="button"
           className="bookmark-chip is-folder"
-          title={`${folder} — all bookmarks`}
+          title={`${folder} — All Bookmarks`}
           onClick={() => dispatch({ type: "navigate", url: "scaffold://bookmarks" })}
         >
           <Icon name="library" size={11} />
           <span>{folder}</span>
         </button>
       ))}
+      {empty && (
+        <span className="bookmarks-empty">Use the star in the address bar to save a page.</span>
+      )}
       <button
         type="button"
         className="bookmarks-all"
-        aria-label="all bookmarks"
-        title="all bookmarks"
+        aria-label="All Bookmarks"
+        title="All Bookmarks"
         onClick={() => dispatch({ type: "navigate", url: "scaffold://bookmarks" })}
       >
-        <Icon name="more" size={14} />
+        <Icon name="library" size={12} />
+        <span>All Bookmarks</span>
       </button>
     </nav>
   );

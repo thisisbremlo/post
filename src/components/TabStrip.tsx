@@ -17,6 +17,7 @@ const PAGE_ICONS: Record<string, IconName> = {
   turbo: "zap",
   settings: "settings",
   updates: "export",
+  bookmarks: "star",
 };
 
 function iconFor(url: string): IconName {

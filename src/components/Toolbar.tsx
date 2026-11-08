@@ -170,46 +170,48 @@ export function Toolbar({
   const tools: MenuItem[] = [
     {
       id: "settings",
-      label: "settings",
+      label: "Settings",
       icon: "settings",
       hint: "⌘,",
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://settings" }),
     },
     {
       id: "history",
-      label: "history",
+      label: "History",
       icon: "clock",
       separatorBefore: true,
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://history" }),
     },
     {
       id: "bookmarks",
-      label: "bookmarks",
+      label: "Bookmarks",
       icon: "star",
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://bookmarks" }),
     },
     {
       id: "bookmarks-bar",
-      label: state.settings.bookmarksBar ? "hide the bookmarks bar" : "show the bookmarks bar",
+      label: state.settings.bookmarksBar
+        ? "Hide the Bookmarks Bar"
+        : "Show the Bookmarks Bar",
       icon: "bookmark",
       onSelect: () =>
         dispatch({ type: "settings", settings: { bookmarksBar: !state.settings.bookmarksBar } }),
     },
     {
       id: "sittings",
-      label: "sittings",
+      label: "Sittings",
       icon: "tab",
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://sittings" }),
     },
     {
       id: "shelf",
-      label: "shelf",
+      label: "Shelf",
       icon: "sheets",
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://shelf" }),
     },
     {
       id: "turbo",
-      label: "turbo notes",
+      label: "Turbo Notes",
       icon: "zap",
       onSelect: () => dispatch({ type: "navigate", url: "scaffold://turbo" }),
     },

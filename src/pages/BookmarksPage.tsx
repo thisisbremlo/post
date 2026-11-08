@@ -20,12 +20,12 @@ export function BookmarksPage() {
     try {
       const items = parseBookmarksHtml(await file.text());
       if (items.length === 0) {
-        dispatch({ type: "notice", text: "no bookmarks found in that file" });
+        dispatch({ type: "notice", text: "No bookmarks found in that file." });
         return;
       }
       dispatch({ type: "bookmark-import", items });
     } catch {
-      dispatch({ type: "notice", text: "couldn't read that bookmark file" });
+      dispatch({ type: "notice", text: "Could not read that bookmarks file." });
     }
   };
 
@@ -40,7 +40,7 @@ export function BookmarksPage() {
 
   const groups = new Map<string, Bookmark[]>();
   for (const bookmark of matches) {
-    const folder = bookmark.folder?.trim() || "bookmarks bar";
+    const folder = bookmark.folder?.trim() || "Bookmarks Bar";
     const list = groups.get(folder) ?? [];
     list.push(bookmark);
     groups.set(folder, list);
@@ -51,8 +51,8 @@ export function BookmarksPage() {
       <div className="page-inner">
         <header className="page-head">
           <div>
-            <h1 className="page-title">bookmarks</h1>
-            <p className="page-meta">the pages you keep, without a note</p>
+            <h1 className="page-title">Bookmarks</h1>
+            <p className="page-meta">The pages you keep, without a note.</p>
           </div>
           <div className="page-actions">
             <input
@@ -65,11 +65,11 @@ export function BookmarksPage() {
             <button
               type="button"
               className="text-action"
-              title="import a Chrome, Firefox or Safari bookmark file"
+              title="Import a Chrome, Firefox, or Safari bookmarks file"
               onClick={() => importRef.current?.click()}
             >
               <Icon name="upload" size={14} />
-              import html
+              Import HTML
             </button>
           </div>
         </header>
@@ -85,8 +85,8 @@ export function BookmarksPage() {
               <input
                 className="bookmark-search-input"
                 value={query}
-                placeholder="search bookmarks"
-                aria-label="search bookmarks"
+                placeholder="Search bookmarks"
+                aria-label="Search bookmarks"
                 spellCheck={false}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -118,8 +118,8 @@ export function BookmarksPage() {
                         <button
                           type="button"
                           className="bookmark-remove"
-                          aria-label={`remove ${bookmark.title}`}
-                          title="remove bookmark"
+                          aria-label={`Remove ${bookmark.title}`}
+                          title="Remove Bookmark"
                           onClick={() => dispatch({ type: "bookmark-remove", id: bookmark.id })}
                         >
                           <Icon name="trash" size={13} />
