@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld("scaffold", {
 
   getAdblockState: () => ipcRenderer.invoke("scaffold:adblock-state"),
   setAdblockEnabled: (enabled) => ipcRenderer.invoke("scaffold:adblock-enabled", { enabled }),
+  setAdblockFeature: (feature, enabled) =>
+    ipcRenderer.invoke("scaffold:adblock-feature", { feature, enabled }),
   setAdblockSite: (host, allowed) =>
     ipcRenderer.invoke("scaffold:adblock-site", { host, allowed }),
   setAdblockLists: (lists) => ipcRenderer.invoke("scaffold:adblock-lists", { lists }),

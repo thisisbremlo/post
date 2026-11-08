@@ -235,8 +235,9 @@ export function SettingsPage() {
             <div className="setting-copy">
               <h3 className="setting-name">ad blocking</h3>
               <p className="setting-note">
-                Ghostery's ads and tracking lists, enforced in the browser's network session — no
-                extension, no page script. {adblock ? `${adblock.blocked} requests blocked this session.` : ""}
+                Ghostery's ads, tracking and cookie-notice lists, enforced in the browser's network
+                session — no extension, no page script.{" "}
+                {adblock ? `${adblock.blocked} requests blocked this session.` : ""}
               </p>
             </div>
             {bridge ? (

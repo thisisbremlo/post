@@ -88,6 +88,7 @@ export function App() {
   const [updateOpen, setUpdateOpen] = useState(false);
   const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [adblockOpen, setAdblockOpen] = useState(false);
   const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
   const [reader, setReader] = useState<Article | null>(null);
   const [adblock, setAdblock] = useState<AdblockState | null>(null);
@@ -110,7 +111,8 @@ export function App() {
     reader !== null ||
     menu !== null ||
     turbo !== null ||
-    toolsOpen;
+    toolsOpen ||
+    adblockOpen;
   const overlaysNative = bridge !== null && floating && internalPageOf(activeTab.url) === null;
 
   // One dialog per new build, not per launch: closing it is enough until main moves again.
@@ -979,6 +981,7 @@ export function App() {
           })
         }
         onMenuChange={setToolsOpen}
+        onAdblockOpen={setAdblockOpen}
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
         adblock={adblock}

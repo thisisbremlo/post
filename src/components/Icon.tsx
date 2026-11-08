@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Ban,
   Bookmark,
   BookOpen,
   Check,
@@ -10,11 +11,14 @@ import {
   ChevronUp,
   Camera,
   Clock,
+  Cookie,
   Copy,
   Download,
   Files,
+  Ghost,
   Globe,
   Home,
+  Megaphone,
   Info,
   KeyRound,
   Image,
@@ -22,8 +26,10 @@ import {
   Link,
   Monitor,
   MoreHorizontal,
+  Pause,
   Pin,
   PinOff,
+  Play,
   Plus,
   Quote,
   RotateCw,
@@ -82,7 +88,13 @@ export type IconName =
   | "shield"
   | "camera"
   | "upload"
-  | "reader";
+  | "reader"
+  | "ghost"
+  | "pause"
+  | "play"
+  | "ban"
+  | "megaphone"
+  | "cookie";
 
 /** One set, one weight. The names are ours; the drawings are Lucide's. */
 const ICONS: Record<IconName, LucideIcon> = {
@@ -126,6 +138,12 @@ const ICONS: Record<IconName, LucideIcon> = {
   camera: Camera,
   upload: Upload,
   reader: BookOpen,
+  ghost: Ghost,
+  pause: Pause,
+  play: Play,
+  ban: Ban,
+  megaphone: Megaphone,
+  cookie: Cookie,
 };
 
 export function Icon({

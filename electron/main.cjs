@@ -11,12 +11,18 @@ const {
 const path = require("node:path");
 const fs = require("node:fs");
 const { spawn } = require("node:child_process");
-const { ElectronBlocker } = require("@ghostery/adblocker-electron");
+const {
+  ElectronBlocker,
+  adsLists,
+  adsAndTrackingLists,
+  fullLists,
+} = require("@ghostery/adblocker-electron");
+const loadTrackerDB = require("@ghostery/trackerdb").default;
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
 const PARTITION = "persist:scaffold";
 const ADBLOCK_TTL = 7 * 24 * 60 * 60 * 1000;
-const ADBLOCK_TIMEOUT = 30_000;
+const ADBLOCK_TIMEOUT = 45_000;
 
 /** Internal pages are drawn by the chrome; a native view would paint over them. */
 const isInternalUrl = (url) => typeof url === "string" && url.startsWith("scaffold://");
@@ -406,7 +412,27 @@ function destroyTab(tabId) {
 
 /* --------------------------------------------------------------- adblocker */
 
-const adblockCachePath = () => path.join(app.getPath("userData"), "adblocker.bin");
+/** The three groups the Ghostery panel exposes as separate switches. */
+const ADBLOCK_TRACKING_LISTS = adsAndTrackingLists.filter((url) => !adsLists.includes(url));
+const ADBLOCK_CONSENT_LISTS = fullLists.filter((url) => !adsAndTrackingLists.includes(url));
+
+/** The six rows in the observed-activities card, in Ghostery's own colours. */
+const ADBLOCK_GROUPS = [
+  { key: "advertising", label: "Advertising", color: "#cb55cd" },
+  { key: "site_analytics", label: "Site Analytics", color: "#87d7ef" },
+  { key: "consent", label: "Consent Management", color: "#556fcd" },
+  { key: "utilities", label: "Essential", color: "#fc9734" },
+  { key: "customer_interaction", label: "Customer Interaction", color: "#ef671e" },
+  { key: "other", label: "Other", color: "#c7c9d1" },
+];
+
+function adblockGroupOf(key) {
+  if (key === "essential") return "utilities";
+  if (key === "consent_management") return "consent";
+  return ADBLOCK_GROUPS.some((group) => group.key === key) ? key : "other";
+}
+
+const adblockCachePath = () => path.join(app.getPath("userData"), "adblocker-v2.bin");
 
 /** A stale cache stays usable until the new lists arrive. */
 function adblockCacheAge() {
@@ -441,11 +467,21 @@ let adblocker = null;
 /** @type {Promise<void> | null} */
 let adblockRefresh = null;
 let adblockEnabled = true;
+let adblockAds = true;
+let adblockTracking = true;
+let adblockConsent = true;
+let adblockRefreshing = false;
 /** @type {Set<string>} */
 let adblockAllowed = new Set();
 let adblockBlocking = false;
 let adblockBlocked = 0;
 let adblockActiveHost = "";
+/** @type {Map<string, { blocked: number, observed: number, categories: Map<string, number> }>} */
+const adblockStats = new Map();
+/** @type {{ matchUrl: (request: object, options?: object) => Array<{ category?: { key?: string } }> } | null} */
+let adblockTrackerDB = null;
+/** @type {Promise<unknown> | null} */
+let adblockTrackerDBLoading = null;
 /** @type {string[]} */
 let adblockLists = [];
 /** @type {number | null} */
@@ -460,7 +496,11 @@ const adblockConfigPath = () => path.join(app.getPath("userData"), "adblock.json
 function loadAdblockConfig() {
   try {
     const stored = JSON.parse(fs.readFileSync(adblockConfigPath(), "utf8"));
-    adblockEnabled = stored?.enabled !== false;
+    const legacy = stored?.enabled !== false;
+    adblockAds = typeof stored?.ads === "boolean" ? stored.ads : legacy;
+    adblockTracking = typeof stored?.tracking === "boolean" ? stored.tracking : legacy;
+    adblockConsent = typeof stored?.consent === "boolean" ? stored.consent : legacy;
+    adblockEnabled = adblockAds || adblockTracking || adblockConsent;
     adblockAllowed = new Set(
       Array.isArray(stored?.allow)
         ? stored.allow
@@ -472,6 +512,9 @@ function loadAdblockConfig() {
       ? stored.lists.map(normalizeListUrl).filter(Boolean).slice(0, 12)
       : [];
   } catch {
+    adblockAds = true;
+    adblockTracking = true;
+    adblockConsent = true;
     adblockEnabled = true;
     adblockAllowed = new Set();
     adblockLists = [];
@@ -483,7 +526,14 @@ function saveAdblockConfig() {
     fs.writeFileSync(
       adblockConfigPath(),
       JSON.stringify(
-        { enabled: adblockEnabled, allow: [...adblockAllowed], lists: adblockLists },
+        {
+          enabled: adblockEnabled,
+          ads: adblockAds,
+          tracking: adblockTracking,
+          consent: adblockConsent,
+          allow: [...adblockAllowed],
+          lists: adblockLists,
+        },
         null,
         2,
       ),
@@ -491,6 +541,73 @@ function saveAdblockConfig() {
   } catch (error) {
     console.warn("adblocker: could not save preferences:", error.message);
   }
+}
+
+/** The current site's six activity rows. Unknown trackers land in Other. */
+function adblockCategoriesFor(host) {
+  const stats = host ? adblockStats.get(host) : null;
+  return ADBLOCK_GROUPS.map((group) => ({
+    ...group,
+    count: stats?.categories.get(group.key) ?? 0,
+  }));
+}
+
+function adblockStatsFor(host) {
+  let stats = adblockStats.get(host);
+  if (!stats) {
+    stats = { blocked: 0, observed: 0, categories: new Map() };
+    adblockStats.set(host, stats);
+  }
+  return stats;
+}
+
+/** Which site a blocked subresource belongs to, even when it is not in front. */
+function adblockHostFor(request) {
+  // A tab's own address keeps iframes and subresources on one page total.
+  for (const entry of pageViews.values()) {
+    if (entry.view.webContents.id === request.tabId) return hostOf(entry.url);
+  }
+  const source = hostOf(request.sourceUrl || "");
+  if (source) return source;
+  return adblockActiveHost;
+}
+
+function adblockCategoryFor(request, host) {
+  if (!adblockTrackerDB) return null;
+  try {
+    const details = { url: request.url, type: request.type || "other" };
+    if (request.sourceUrl) details.sourceUrl = request.sourceUrl;
+    else if (host) details.sourceUrl = `https://${host}/`;
+    const category = adblockTrackerDB.matchUrl(details, { getDomainMetadata: true })[0]?.category;
+    return category
+      ? { key: adblockGroupOf(category.key), matched: true }
+      : { key: "other", matched: false };
+  } catch {
+    return null;
+  }
+}
+
+/** Load Ghostery's open TrackerDB once, next to the filter engine. */
+function loadAdblockTrackerDB() {
+  if (adblockTrackerDB) return Promise.resolve(adblockTrackerDB);
+  if (adblockTrackerDBLoading) return adblockTrackerDBLoading;
+  adblockTrackerDBLoading = (async () => {
+    try {
+      const file = path.join(
+        path.dirname(require.resolve("@ghostery/trackerdb")),
+        "..",
+        "trackerdb.engine",
+      );
+      adblockTrackerDB = await loadTrackerDB(fs.readFileSync(file));
+      sendAdblock(true);
+    } catch (error) {
+      console.warn("adblocker: could not load tracker categories:", error.message);
+    } finally {
+      adblockTrackerDBLoading = null;
+    }
+    return adblockTrackerDB;
+  })();
+  return adblockTrackerDBLoading;
 }
 
 /** The hostname as people read it, without the www every site carries anyway. */
@@ -512,15 +629,22 @@ function normalizeListUrl(value) {
 }
 
 function adblockState() {
+  const stats = adblockActiveHost ? adblockStats.get(adblockActiveHost) : null;
   return {
     enabled: adblockEnabled,
+    ads: adblockAds,
+    tracking: adblockTracking,
+    consent: adblockConsent,
     blocked: adblockBlocked,
+    siteBlocked: stats?.blocked ?? 0,
+    categories: adblockCategoriesFor(adblockActiveHost),
     updatedAt: adblockUpdatedAt,
     allow: [...adblockAllowed].sort(),
     lists: [...adblockLists],
     activeHost: adblockActiveHost,
     paused: Boolean(adblockActiveHost) && adblockAllowed.has(adblockActiveHost),
     ready: adblocker !== null,
+    refreshing: adblockRefreshing,
     error: adblockError,
   };
 }
@@ -542,8 +666,28 @@ function sendAdblock(immediate = false) {
 }
 
 function attachAdblockEvents(blocker) {
-  blocker.on("request-blocked", () => {
+  blocker.on("request-blocked", (request) => {
     adblockBlocked += 1;
+    const host = adblockHostFor(request);
+    if (host) {
+      const stats = adblockStatsFor(host);
+      stats.blocked += 1;
+      stats.observed += 1;
+      const category = adblockCategoryFor(request, host);
+      const key = category?.key ?? "other";
+      stats.categories.set(key, (stats.categories.get(key) || 0) + 1);
+    }
+    sendAdblock();
+  });
+
+  // Ghostery shows trackers it saw and allowed too, not only the ones it stopped.
+  blocker.on("request-allowed", (request) => {
+    const host = adblockHostFor(request);
+    const category = adblockCategoryFor(request, host);
+    if (!host || !category?.matched) return;
+    const stats = adblockStatsFor(host);
+    stats.observed += 1;
+    stats.categories.set(category.key, (stats.categories.get(category.key) || 0) + 1);
     sendAdblock();
   });
 }
@@ -601,11 +745,29 @@ async function refreshAdblocker(force = false) {
 
   adblockRefresh = (async () => {
     let extraError = null;
+    adblockRefreshing = true;
+    sendAdblock(true);
     try {
-      let blocker = await withTimeout(
-        ElectronBlocker.fromPrebuiltAdsAndTracking(fetch),
-        ADBLOCK_TIMEOUT,
-      );
+      const baseLists = [
+        ...(adblockAds ? adsLists : []),
+        ...(adblockTracking ? ADBLOCK_TRACKING_LISTS : []),
+        ...(adblockConsent ? ADBLOCK_CONSENT_LISTS : []),
+      ];
+      if (baseLists.length === 0) {
+        const target = session.fromPartition(PARTITION);
+        if (adblockBlocking && adblocker) {
+          try {
+            adblocker.disableBlockingInSession(target);
+          } catch {
+            /* nothing is being blocked once every group is off */
+          }
+        }
+        adblockBlocking = false;
+        adblockError = null;
+        return;
+      }
+
+      let blocker = await withTimeout(ElectronBlocker.fromLists(fetch, baseLists), ADBLOCK_TIMEOUT);
       if (adblockLists.length > 0) {
         try {
           const extra = await withTimeout(
@@ -648,6 +810,7 @@ async function refreshAdblocker(force = false) {
       adblockError = error.message;
       console.warn("adblocker: could not update the lists:", error.message);
     } finally {
+      adblockRefreshing = false;
       adblockRefresh = null;
       sendAdblock(true);
     }
@@ -658,6 +821,7 @@ async function refreshAdblocker(force = false) {
 
 function startAdblocker() {
   loadAdblockConfig();
+  void loadAdblockTrackerDB();
   const cached = readAdblockCache();
   if (cached) {
     adblocker = cached.blocker;
@@ -896,12 +1060,29 @@ ipcMain.handle("scaffold:read-article", async (_event, { tabId } = {}) => {
 ipcMain.handle("scaffold:adblock-state", () => adblockState());
 
 ipcMain.handle("scaffold:adblock-enabled", (_event, { enabled } = {}) => {
-  adblockEnabled = enabled !== false;
+  const on = enabled !== false;
+  adblockAds = on;
+  adblockTracking = on;
+  adblockConsent = on;
+  adblockEnabled = on;
   saveAdblockConfig();
   syncAdblock();
-  if (adblockEnabled && (!adblocker || adblockCacheAge() >= ADBLOCK_TTL)) {
-    void refreshAdblocker();
+  if (on) void refreshAdblocker(true);
+  return adblockState();
+});
+
+ipcMain.handle("scaffold:adblock-feature", (_event, { feature, enabled } = {}) => {
+  if (feature !== "ads" && feature !== "tracking" && feature !== "consent") {
+    return adblockState();
   }
+  const on = enabled !== false;
+  if (feature === "ads") adblockAds = on;
+  if (feature === "tracking") adblockTracking = on;
+  if (feature === "consent") adblockConsent = on;
+  adblockEnabled = adblockAds || adblockTracking || adblockConsent;
+  saveAdblockConfig();
+  syncAdblock();
+  if (adblockEnabled) void refreshAdblocker(true);
   return adblockState();
 });
 

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { AdblockState } from "../lib/bridge";
 import type { UpdateInfo } from "../lib/updates";
 import { useActiveTab, useStore } from "../state/store";
+import { AdblockPanel } from "./AdblockPanel";
 import { ContextMenu } from "./ContextMenu";
 import type { MenuItem } from "./ContextMenu";
 import { Icon } from "./Icon";
@@ -13,6 +14,7 @@ export function Toolbar({
   onOpenPalette,
   onOpenTurbo,
   onMenuChange,
+  onAdblockOpen,
   update,
   onOpenUpdate,
   adblock,
@@ -20,6 +22,7 @@ export function Toolbar({
   onOpenPalette: () => void;
   onOpenTurbo: (box: DOMRect) => void;
   onMenuChange: (open: boolean) => void;
+  onAdblockOpen: (open: boolean) => void;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
   adblock: AdblockState | null;
@@ -28,6 +31,20 @@ export function Toolbar({
   const tab = useActiveTab();
   const held = state.reference?.url === tab.url;
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [adblockPanel, setAdblockPanel] = useState<{ right: number; bottom: number } | null>(
+    null,
+  );
+
+  // A popup belongs to the page it describes; a new address closes it.
+  useEffect(() => {
+    setAdblockPanel(null);
+    onAdblockOpen(false);
+  }, [tab.id, tab.url, onAdblockOpen]);
+
+  const closeAdblock = () => {
+    setAdblockPanel(null);
+    onAdblockOpen(false);
+  };
 
   // The three dots are the browser's own drawer: places to go, settings to change.
   const tools: MenuItem[] = [
@@ -163,18 +180,29 @@ export function Toolbar({
             (!adblock.enabled ? " is-off" : adblock.paused ? " is-paused" : "")
           }
           aria-label="ad blocking status"
+          aria-haspopup="dialog"
+          aria-expanded={Boolean(adblockPanel)}
+          data-adblock-toggle
           title={
             !adblock.enabled
-              ? "ad blocking is off — open settings to turn it on"
+              ? "ad blocking is off — open the panel to turn it on"
               : adblock.paused
-                ? `paused on ${adblock.activeHost} — open settings to manage exceptions`
-                : `Ghostery lists: ${adblock.blocked} requests blocked this session`
+                ? `paused on ${adblock.activeHost} — open the panel to resume`
+                : `${adblock.siteBlocked} requests blocked on this page`
           }
-          onClick={() => dispatch({ type: "navigate", url: "scaffold://settings" })}
+          onClick={(event) => {
+            if (adblockPanel) {
+              closeAdblock();
+              return;
+            }
+            const box = event.currentTarget.getBoundingClientRect();
+            setAdblockPanel({ right: box.right, bottom: box.bottom });
+            onAdblockOpen(true);
+          }}
         >
-          <Icon name="shield" size={13} />
+          <Icon name="ghost" size={13} />
           <span className="tnum">
-            {!adblock.enabled ? "off" : adblock.paused ? "paused" : adblock.blocked}
+            {!adblock.enabled ? "off" : adblock.paused ? "paused" : adblock.siteBlocked}
           </span>
         </button>
       )}
@@ -253,6 +281,17 @@ export function Toolbar({
         />
       )}
 
+      {adblock && adblockPanel && (
+        <AdblockPanel
+          adblock={adblock}
+          anchor={adblockPanel}
+          onClose={closeAdblock}
+          onOpenSettings={() => {
+            closeAdblock();
+            dispatch({ type: "navigate", url: "scaffold://settings" });
+          }}
+        />
+      )}
     </header>
   );
 }

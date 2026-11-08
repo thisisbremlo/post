@@ -28,7 +28,15 @@
       "output": "release",
       "buildResources": "build"
     },
-    "files": ["dist/**/*", "electron/**/*", "package.json"],
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "!node_modules/@ghostery/trackerdb/dist/trackerdb.db",
+      "!node_modules/@ghostery/trackerdb/dist/trackerdb.json",
+      "!node_modules/@ghostery/trackerdb/dist/trackerdb.txt",
+      "!node_modules/@ghostery/trackerdb/dist/mjs/**/*"
+    ],
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.png",
@@ -45,7 +53,8 @@
     }
   },
   "dependencies": {
-    "@ghostery/adblocker-electron": "^2.20.3"
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "@ghostery/trackerdb": "^1.0.969"
   },
   "devDependencies": {
     "@fontsource-variable/instrument-sans": "^5.1.1",

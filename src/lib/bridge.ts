@@ -75,9 +75,23 @@ export interface PagePreferences {
   doNotTrack: boolean;
 }
 
+export interface AdblockCategory {
+  key: string;
+  label: string;
+  color: string;
+  count: number;
+}
+
 export interface AdblockState {
   enabled: boolean;
+  /** The three groups in Ghostery's panel, switched independently. */
+  ads: boolean;
+  tracking: boolean;
+  consent: boolean;
   blocked: number;
+  /** Requests blocked on the page in front, not over the whole session. */
+  siteBlocked: number;
+  categories: AdblockCategory[];
   updatedAt: number | null;
   /** Hosts explicitly allowed through the blocker. */
   allow: string[];
@@ -86,6 +100,7 @@ export interface AdblockState {
   activeHost: string;
   paused: boolean;
   ready: boolean;
+  refreshing: boolean;
   error: string | null;
 }
 
@@ -123,6 +138,10 @@ export interface ScaffoldBridge {
   readArticle: (tabId: string) => Promise<Article | null>;
   getAdblockState: () => Promise<AdblockState>;
   setAdblockEnabled: (enabled: boolean) => Promise<AdblockState>;
+  setAdblockFeature: (
+    feature: "ads" | "tracking" | "consent",
+    enabled: boolean,
+  ) => Promise<AdblockState>;
   /** Allowlist one host, or put it back under the blocker. */
   setAdblockSite: (host: string, allowed: boolean) => Promise<AdblockState>;
   setAdblockLists: (lists: string[]) => Promise<AdblockState>;
