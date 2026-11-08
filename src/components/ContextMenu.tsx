@@ -22,11 +22,13 @@ export function ContextMenu({
   x,
   y,
   items,
+  label = "Page Actions",
   onClose,
 }: {
   x: number;
   y: number;
   items: MenuItem[];
+  label?: string;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -76,7 +78,7 @@ export function ContextMenu({
       ref={ref}
       className="menu"
       role="menu"
-      aria-label="page actions"
+      aria-label={label}
       style={{ left, top, width }}
       onKeyDown={walk}
       onContextMenu={(event) => event.preventDefault()}

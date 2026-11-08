@@ -2,7 +2,11 @@ import { useStore } from "../state/store";
 import { Icon } from "./Icon";
 
 /** The flat part of Chrome's bar: root bookmarks first, then folders. */
-export function BookmarksBar() {
+export function BookmarksBar({
+  onOpenFolder,
+}: {
+  onOpenFolder: (folder: string, anchor: DOMRect) => void;
+}) {
   const { state, dispatch } = useStore();
   if (!state.settings.bookmarksBar) return null;
 
@@ -41,15 +45,18 @@ export function BookmarksBar() {
           key={folder}
           type="button"
           className="bookmark-chip is-folder"
-          title={`${folder} — All Bookmarks`}
-          onClick={() => dispatch({ type: "navigate", url: "scaffold://bookmarks" })}
+          title={`Open ${folder} Bookmarks`}
+          aria-haspopup="menu"
+          onClick={(event) =>
+            onOpenFolder(folder, event.currentTarget.getBoundingClientRect())
+          }
         >
           <Icon name="library" size={11} />
           <span>{folder}</span>
         </button>
       ))}
       {empty && (
-        <span className="bookmarks-empty">Use the star in the address bar to save a page.</span>
+        <span className="bookmarks-empty">Use Keep in the address bar to save a page.</span>
       )}
       <button
         type="button"

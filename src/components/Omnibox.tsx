@@ -89,6 +89,7 @@ export function Omnibox({ tab }: { tab: Tab }) {
           setEditing(true);
           event.currentTarget.select();
         }}
+        onClick={(event) => event.currentTarget.select()}
         onBlur={() => {
           setEditing(false);
           setValue(tab.url);

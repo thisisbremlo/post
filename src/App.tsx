@@ -55,6 +55,7 @@ interface MenuState {
   x: number;
   y: number;
   items: MenuItem[];
+  label?: string;
 }
 
 interface Clip {
@@ -1057,6 +1058,23 @@ export function App() {
 
   const constrained = activeTab.width !== "fit";
 
+  const openBookmarkFolder = (folder: string, anchor: DOMRect) => {
+    const pages = state.bookmarks.filter((bookmark) => bookmark.folder === folder);
+    if (pages.length === 0) return;
+    const items: MenuItem[] = pages.map((bookmark) => ({
+      id: `folder-${bookmark.id}`,
+      label: bookmark.title,
+      icon: "bookmark",
+      onSelect: () => dispatch({ type: "navigate", url: bookmark.url }),
+    }));
+    setMenu({
+      x: anchor.left,
+      y: anchor.bottom + 6,
+      items,
+      label: `Bookmarks in ${folder}`,
+    });
+  };
+
   return (
     <div
       className={
@@ -1083,7 +1101,7 @@ export function App() {
         adblock={adblock}
       />
 
-      <BookmarksBar />
+      <BookmarksBar onOpenFolder={openBookmarkFolder} />
 
       <main className="desk">
         {state.reference && (
@@ -1107,7 +1125,13 @@ export function App() {
       )}
 
       {menu && (
-        <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={menu.items}
+          label={menu.label}
+          onClose={() => setMenu(null)}
+        />
       )}
 
       {keepOpen && (
