@@ -70,15 +70,6 @@ export interface UpdateNotice {
   entries?: ChangelogEntry[];
 }
 
-export interface ExtensionInfo {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  /** A chrome-extension:// page for its toolbar popup; empty when it has none. */
-  popup: string;
-}
-
 export interface PagePreferences {
   zoom: number;
   doNotTrack: boolean;
@@ -104,11 +95,6 @@ export interface ScaffoldBridge {
   setOverlay: (open: boolean) => void;
   /** Applies default zoom and Do Not Track to every page view, now and later. */
   setPreferences: (preferences: PagePreferences) => void;
-  /** Unpacked Chrome extensions kept in this profile. */
-  listExtensions: () => Promise<ExtensionInfo[]>;
-  addExtension: () => Promise<ExtensionInfo[]>;
-  installFromStore: (url: string) => Promise<ExtensionInfo[]>;
-  removeExtension: (id: string) => Promise<ExtensionInfo[]>;
   openDownloads: () => void;
   navigate: (tabId: string, url: string) => void;
   /** Reads the page's own account of itself; null on Post's pages and on failure. */

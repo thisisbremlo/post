@@ -48,17 +48,6 @@ export function SettingsPage() {
 
   const set = (next: Partial<Settings>) => dispatch({ type: "settings", settings: next });
 
-  const addExtension = async () => {
-    if (!bridge) return;
-    try {
-      await bridge.addExtension();
-      dispatch({ type: "notice", text: "extension added — it is in the toolbar" });
-      window.dispatchEvent(new CustomEvent("scaffold:extensions-changed"));
-    } catch {
-      dispatch({ type: "notice", text: "that folder is not an unpacked extension" });
-    }
-  };
-
   return (
     <div className="page">
       <div className="page-inner">
@@ -230,25 +219,6 @@ export function SettingsPage() {
               </p>
             </div>
             <span className="setting-static">denied</span>
-          </section>
-        </Group>
-
-        <Group title="extensions">
-          <section className="setting-row">
-            <div className="setting-copy">
-              <h3 className="setting-name">chrome extensions</h3>
-              <p className="setting-note">
-                Unpacked Chrome extensions run here, listed behind the puzzle in the toolbar.
-                Install one from its folder.
-              </p>
-            </div>
-            {bridge ? (
-              <button type="button" className="setting-action" onClick={() => void addExtension()}>
-                add an extension…
-              </button>
-            ) : (
-              <span className="setting-static">desktop only</span>
-            )}
           </section>
         </Group>
 

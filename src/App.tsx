@@ -4,7 +4,6 @@ import { BookmarkDialog } from "./components/BookmarkDialog";
 import { BookmarksBar } from "./components/BookmarksBar";
 import { ContextMenu } from "./components/ContextMenu";
 import type { MenuItem } from "./components/ContextMenu";
-import { ExtensionsMenu } from "./components/ExtensionsMenu";
 import { KeepDialog } from "./components/KeepDialog";
 import { MetaSheet } from "./components/MetaSheet";
 import { Palette } from "./components/Palette";
@@ -18,7 +17,6 @@ import { UpdateDialog } from "./components/UpdateDialog";
 import {
   bridge,
   type BrowserCommand,
-  type ExtensionInfo,
   type PageMeta,
   type ViewRect,
 } from "./lib/bridge";
@@ -86,10 +84,7 @@ export function App() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [turbo, setTurbo] = useState<{ x: number; y: number } | null>(null);
-  const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
-  const [extMenu, setExtMenu] = useState<{ x: number; y: number } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [storeBusy, setStoreBusy] = useState(false);
   const [metaSheet, setMetaSheet] = useState<{ meta: PageMeta; tab: Tab } | null>(null);
 
   const stageRef = useRef<HTMLElement>(null);
@@ -99,11 +94,6 @@ export function App() {
 
   const keepTab = state.tabs.find((tab) => tab.id === keepTabId) ?? activeTab;
   const bookmarkTab = state.tabs.find((tab) => tab.id === bookmarkTabId) ?? null;
-  const storePage =
-    internalPageOf(activeTab.url) === null &&
-    /^https:\/\/(?:chromewebstore\.google\.com|chrome\.google\.com\/webstore)\//.test(
-      activeTab.url,
-    );
   const floating =
     keepOpen ||
     paletteOpen ||
@@ -112,7 +102,6 @@ export function App() {
     metaSheet !== null ||
     menu !== null ||
     turbo !== null ||
-    extMenu !== null ||
     toolsOpen;
   const overlaysNative = bridge !== null && floating && internalPageOf(activeTab.url) === null;
 
@@ -145,26 +134,6 @@ export function App() {
     if (internalPageOf(tab.url) !== null) return;
     dispatch({ type: "bookmark-add", url: tab.url, title: tab.title });
     setBookmarkTabId(tab.id);
-  };
-
-  // Chrome's own install button is internal browser UI, not a web API. When a
-  // store page is open, Post offers the install it can actually perform.
-  const installStoreExtension = async () => {
-    if (!bridge || storeBusy) return;
-    setStoreBusy(true);
-    dispatch({ type: "notice", text: "installing the extension…" });
-    try {
-      await bridge.installFromStore(activeTab.url);
-      window.dispatchEvent(new CustomEvent("scaffold:extensions-changed"));
-      dispatch({ type: "notice", text: "extension installed — it is behind the puzzle" });
-    } catch {
-      dispatch({
-        type: "notice",
-        text: "this extension needs Chrome APIs Post cannot run",
-      });
-    } finally {
-      setStoreBusy(false);
-    }
   };
 
   // ⌘⇧D, and the toolbar button, both open the same one-line note.
@@ -211,20 +180,6 @@ export function App() {
     };
   }, []);
 
-  // Extensions live in the shell's profile; the chrome only lists them.
-  useEffect(() => {
-    if (!bridge) return;
-    const read = () => {
-      bridge!
-        .listExtensions()
-        .then(setExtensions)
-        .catch(() => setExtensions([]));
-    };
-    read();
-    window.addEventListener("scaffold:extensions-changed", read);
-    return () => window.removeEventListener("scaffold:extensions-changed", read);
-  }, []);
-
   // Zoom and Do Not Track are page-level, so the shell applies them to every view.
   useEffect(() => {
     bridge?.setPreferences({
@@ -263,7 +218,6 @@ export function App() {
         setKeepOpen(false);
         setMenu(null);
         setUpdateOpen(false);
-        setExtMenu(null);
         setBookmarkTabId(null);
         setMetaSheet(null);
         return;
@@ -949,17 +903,7 @@ export function App() {
             y: box.bottom + 8,
           })
         }
-        extensionCount={extensions.length}
         onMenuChange={setToolsOpen}
-        storePage={storePage}
-        storeBusy={storeBusy}
-        onInstallStore={() => void installStoreExtension()}
-        onOpenExtensions={(box) =>
-          setExtMenu({
-            x: Math.min(Math.max(12, box.right - 300), window.innerWidth - 312),
-            y: box.bottom + 6,
-          })
-        }
         update={update}
         onOpenUpdate={() => setUpdateOpen(true)}
       />
@@ -1015,18 +959,6 @@ export function App() {
       )}
       {paletteOpen && <Palette onClose={() => setPaletteOpen(false)} />}
       {turbo && <TurboNote x={turbo.x} y={turbo.y} onClose={() => setTurbo(null)} />}
-      {extMenu && (
-        <ExtensionsMenu
-          x={extMenu.x}
-          y={extMenu.y}
-          onClose={() => setExtMenu(null)}
-          onChange={setExtensions}
-          onOpen={(url) => {
-            setExtMenu(null);
-            dispatch({ type: "open-tab", url });
-          }}
-        />
-      )}
       {metaSheet && (
         <MetaSheet
           tab={metaSheet.tab}

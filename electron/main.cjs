@@ -4,7 +4,6 @@ const {
   Menu,
   WebContentsView,
   clipboard,
-  dialog,
   ipcMain,
   session,
   shell,
@@ -456,167 +455,6 @@ function createWindow() {
   });
 }
 
-/* ------------------------------------------------------------- extensions */
-
-function extensionsDir() {
-  return path.join(app.getPath("userData"), "extensions");
-}
-
-function extSession() {
-  return session.fromPartition(PARTITION);
-}
-
-/** What the chrome may know about an extension: enough to list it and open its popup. */
-function extensionList() {
-  return extSession().getAllExtensions().map((ext) => {
-    const action = ext.manifest?.action ?? ext.manifest?.browser_action ?? {};
-    const popup = typeof action.default_popup === "string" ? action.default_popup : "";
-    return {
-      id: ext.id,
-      name: ext.name,
-      version: ext.version,
-      description: typeof ext.manifest?.description === "string" ? ext.manifest.description : "",
-      popup: popup ? `chrome-extension://${ext.id}/${popup.replace(/^\/+/, "")}` : "",
-    };
-  });
-}
-
-/** Unpacked extensions live in the profile, one folder each. */
-async function loadStoredExtensions() {
-  const dir = extensionsDir();
-  fs.mkdirSync(dir, { recursive: true });
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    try {
-      await extSession().loadExtension(path.join(dir, entry.name), { allowFileAccess: true });
-    } catch (error) {
-      console.warn("extension skipped:", entry.name, error.message);
-    }
-  }
-}
-
-function storeIdOf(input) {
-  const match = String(input ?? "").match(/[a-p]{32}/i);
-  return match ? match[0].toLowerCase() : "";
-}
-
-/** CRX3 wraps a normal zip after a small signed header; CRX2 is the older shape. */
-function zipOffsetOf(crx) {
-  if (crx.subarray(0, 4).toString("ascii") !== "Cr24") return -1;
-  const version = crx.readUInt32LE(4);
-  if (version === 3) return 12 + crx.readUInt32LE(8);
-  if (version === 2) return 16 + crx.readUInt32LE(8) + crx.readUInt32LE(12);
-  return -1;
-}
-
-function unzipArchive(zipPath, destination) {
-  return new Promise((resolve, reject) => {
-    const child = spawn("/usr/bin/ditto", ["-x", "-k", zipPath, destination]);
-    let message = "";
-    child.stderr.on("data", (chunk) => {
-      message += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(message.trim() || "the extension archive could not be opened"));
-    });
-  });
-}
-
-function manifestRootOf(directory) {
-  if (fs.existsSync(path.join(directory, "manifest.json"))) return directory;
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const nested = path.join(directory, entry.name);
-    if (entry.isDirectory() && fs.existsSync(path.join(nested, "manifest.json"))) return nested;
-  }
-  throw new Error("the archive has no manifest.json");
-}
-
-/**
- * The Chrome Web Store serves CRX files, not folder downloads. Fetch the CRX,
- * strip its signed header, unpack the zip, and give it to the same loader as an
- * unpacked folder. Extensions that depend on Chrome-only APIs still fail to
- * load; those are reported rather than hidden.
- */
-const STORE_VERSION = (() => {
-  const parts = process.versions.chrome.split(".").map(Number);
-  // Extensions published today refuse a CRX request below their minimum
-  // Chromium; asking as a current Chrome is what lets the store answer.
-  return `${Math.max(parts[0] || 0, 142)}.${parts[1] || 0}.${parts[2] || 0}.${parts[3] || 0}`;
-})();
-
-async function installFromStore(input) {
-  if (process.platform !== "darwin") {
-    throw new Error("Installing from the Chrome Web Store needs macOS right now.");
-  }
-  const id = storeIdOf(input);
-  if (!id) throw new Error("Paste a Chrome Web Store link or an extension ID.");
-
-  const query = new URLSearchParams({
-    response: "redirect",
-    os: "mac",
-    arch: process.arch === "arm64" ? "arm64" : "x86-64",
-    os_arch: process.arch === "arm64" ? "arm64" : "x86-64",
-    nacl_arch: process.arch === "arm64" ? "arm64" : "x86-64",
-    prod: "chromiumcrx",
-    prodchannel: "unknown",
-    prodversion: STORE_VERSION,
-    lang: "en-US",
-    acceptformat: "crx2,crx3",
-    x: `id=${id}&installsource=ondemand&uc`,
-  });
-
-  const temporary = fs.mkdtempSync(path.join(app.getPath("temp"), "post-store-"));
-  try {
-    const response = await fetch(`https://clients2.google.com/service/update2/crx?${query}`, {
-      redirect: "follow",
-      headers: {
-        "user-agent": `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`,
-      },
-    });
-    if (!response.ok) throw new Error(`the Chrome Web Store answered ${response.status}`);
-
-    const crx = Buffer.from(await response.arrayBuffer());
-    const start = zipOffsetOf(crx);
-    if (start <= 12 || start >= crx.length) {
-      throw new Error("the Chrome Web Store did not offer this extension for Chromium");
-    }
-
-    const zipPath = path.join(temporary, `${id}.zip`);
-    fs.writeFileSync(zipPath, crx.subarray(start));
-    const unpacked = path.join(temporary, "unpacked");
-    fs.mkdirSync(unpacked, { recursive: true });
-    await unzipArchive(zipPath, unpacked);
-
-    const source = manifestRootOf(unpacked);
-    const destination = path.join(extensionsDir(), id);
-    const existing = extSession().getAllExtensions().find((ext) => ext.id === id);
-    if (existing) {
-      try {
-        extSession().removeExtension(id);
-      } catch {
-        /* already gone */
-      }
-    }
-
-    fs.mkdirSync(extensionsDir(), { recursive: true });
-    fs.rmSync(destination, { recursive: true, force: true });
-    fs.cpSync(source, destination, { recursive: true });
-
-    try {
-      await extSession().loadExtension(destination, { allowFileAccess: true });
-    } catch (error) {
-      fs.rmSync(destination, { recursive: true, force: true });
-      throw new Error("this extension needs Chrome APIs Post's Chromium cannot run");
-    }
-
-    return extensionList();
-  } finally {
-    fs.rmSync(temporary, { recursive: true, force: true });
-  }
-}
-
 app.whenReady().then(async () => {
   // Deny by default: camera, microphone, location, notifications.
   session.fromPartition(PARTITION).setPermissionRequestHandler((_contents, _permission, callback) => {
@@ -634,8 +472,6 @@ app.whenReady().then(async () => {
   session.fromPartition(PARTITION).on("will-download", (_event, item) => {
     notify({ kind: "download", title: item.getFilename() });
   });
-
-  await loadStoredExtensions();
 
   applyMenu();
   createWindow();
@@ -668,53 +504,6 @@ ipcMain.on("scaffold:preferences", (_event, preferences) => {
 ipcMain.on("scaffold:open-downloads", () => {
   shell.openPath(app.getPath("downloads"));
 });
-
-ipcMain.handle("scaffold:extensions", () => extensionList());
-
-ipcMain.handle("scaffold:extensions-add", async () => {
-  const picked = await dialog.showOpenDialog({
-    title: "add an extension",
-    buttonLabel: "add",
-    message: "Choose an unpacked Chrome extension folder.",
-    properties: ["openDirectory"],
-  });
-  if (picked.canceled || !picked.filePaths[0]) return extensionList();
-
-  const source = picked.filePaths[0];
-  const dir = extensionsDir();
-  fs.mkdirSync(dir, { recursive: true });
-  const base = path.basename(source);
-  let destination = path.join(dir, base);
-  let copy = 2;
-  while (fs.existsSync(destination)) destination = path.join(dir, `${base}-${copy++}`);
-
-  await fs.promises.cp(source, destination, { recursive: true });
-  try {
-    await extSession().loadExtension(destination, { allowFileAccess: true });
-  } catch (error) {
-    fs.rmSync(destination, { recursive: true, force: true });
-    throw new Error(error.message ?? "that folder is not an unpacked extension");
-  }
-  return extensionList();
-});
-
-ipcMain.handle("scaffold:extensions-remove", (_event, payload) => {
-  const id = typeof payload?.id === "string" ? payload.id : "";
-  const ext = extSession().getAllExtensions().find((item) => item.id === id);
-  if (!ext) return extensionList();
-  try {
-    extSession().removeExtension(id);
-  } catch (error) {
-    console.warn("extension could not be removed:", error.message);
-  }
-  const root = extensionsDir();
-  if (ext.path.startsWith(root + path.sep)) {
-    fs.rmSync(ext.path, { recursive: true, force: true });
-  }
-  return extensionList();
-});
-
-ipcMain.handle("scaffold:extensions-store", (_event, payload) => installFromStore(payload?.url));
 
 ipcMain.on("scaffold:sync-layout", (_event, layout) => applyLayout(layout));
 

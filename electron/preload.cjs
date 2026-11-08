@@ -19,10 +19,6 @@ contextBridge.exposeInMainWorld("scaffold", {
   setOverlay: (open) => ipcRenderer.send("scaffold:overlay", Boolean(open)),
   setPreferences: (preferences) => ipcRenderer.send("scaffold:preferences", preferences),
 
-  listExtensions: () => ipcRenderer.invoke("scaffold:extensions"),
-  addExtension: () => ipcRenderer.invoke("scaffold:extensions-add"),
-  installFromStore: (url) => ipcRenderer.invoke("scaffold:extensions-store", { url }),
-  removeExtension: (id) => ipcRenderer.invoke("scaffold:extensions-remove", { id }),
   openDownloads: () => ipcRenderer.send("scaffold:open-downloads"),
 
   navigate: (tabId, url) => ipcRenderer.send("scaffold:navigate", { tabId, url }),

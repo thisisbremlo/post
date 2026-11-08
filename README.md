@@ -24,7 +24,7 @@ it from disk, which is the shipping shape.
 
 ```bash
 npm install
-npm run package:mac        # release/Post-0.2.0-arm64.dmg and the .app beside it
+npm run package:mac        # release/Post-0.3.0-arm64.dmg and the .app beside it
 ```
 
 Open the dmg and drag **Post** to Applications; it launches on its own, with no
@@ -38,7 +38,7 @@ xattr -dr com.apple.quarantine /Applications/Post.app
 `npm run package` builds for whichever platform you are on, and `npm run package:dir`
 skips the installer when you only want the unpacked app.
 
-## Two targets, one codebase
+## One codebase, two surfaces
 
 - **Desktop (`electron/`)** — a `BaseWindow` with the chrome in one `WebContentsView`
   and one `WebContentsView` per tab, plus a browser-level reference view. Native views
@@ -49,11 +49,6 @@ skips the installer when you only want the unpacked app.
   sheet* that says where the page would be, and offers to load a live frame (some
   sites refuse to be framed). It exists so the interface can be reviewed anywhere.
   Native page views and their context menus only run in the desktop app.
-- **Chromium shell (`chromium/`)** — the next engine, in its own folder: the same desk,
-  driven by `chrome.*` instead of Electron IPC. `chromium/fork/` is the fork build that
-  adds `chrome://post` to a Chromium checkout; the extension under `chromium/shell/` is
-  the harness that keeps the desk testable until that build exists. See
-  `chromium/README.md` and `chromium/fork/README.md`.
 
 State lives in the chrome: tabs, back stacks, tab groups, the shelf, sittings, the
 reference pane. It persists to the profile on disk and, in the desktop app, syncs the
@@ -154,21 +149,9 @@ ungoogled-chromium. It does not use Google services, but it cannot remove their 
 from the binary. There is no Safe Browsing, no sync, no Web Store, and DRM video is
 not guaranteed.
 
-The engine path is Chromium, and it is not CEF: CEF embeds Chromium's content layer,
-while `chrome.tabs`, `chrome.management` and the Web Store live in the browser layer
-above it, so a CEF shell could never run store extensions. `chromium/` is the new shell —
-the desk on `chrome.*`, working today as a real Chromium extension, with the frame
-replacement (`chrome://post` inside Chromium's own `Browser`) as the next milestone. The
-base has to keep the store: ungoogled-chromium removes it, so the fork starts from
-Chromium and takes only the privacy patches that do not cost the store. It is
-weeks-per-release work, not a weekend.
-
 ## Not built yet
 
 - Tab drag-reorder, find-in-page, and Windows/Linux updates: the release workflow
   covers macOS only, and the unpacked Windows and Linux targets have no updater.
 - Turbo notes cannot be searched or pinned yet; the list is chronological, newest first.
 - Contact-sheet export, import from bookmarks, per-site width memory, annotation.
-- Full Chromium extension support is not in this Electron build; it is the reason for
-  the separate shell in `chromium/`, where extensions and the Web Store are Chromium's
-  own and need no reimplementation.

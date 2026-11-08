@@ -23,7 +23,6 @@ import {
   Pin,
   PinOff,
   Plus,
-  Puzzle,
   Quote,
   RotateCw,
   Search,
@@ -74,7 +73,6 @@ export type IconName =
   | "image"
   | "video"
   | "link"
-  | "puzzle"
   | "star"
   | "info";
 
@@ -115,7 +113,6 @@ const ICONS: Record<IconName, LucideIcon> = {
   image: Image,
   video: Video,
   link: Link,
-  puzzle: Puzzle,
   star: Star,
 };
 

@@ -10,8 +10,4 @@ release
 artifacts/
 # the installer needs the path of the machine that packaged the app, not a repo fact
 electron/checkout.json
-dist-shell/
-.chromium-profile/
-# built into the fork overlay by `npm run fork:assets`
-chromium/fork/overlay/chrome/browser/ui/webui/post/resources/
 __pycache__/

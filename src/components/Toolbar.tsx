@@ -11,23 +11,13 @@ import { WidthPills } from "./WidthPills";
 export function Toolbar({
   onOpenPalette,
   onOpenTurbo,
-  onOpenExtensions,
   onMenuChange,
-  extensionCount,
-  storePage,
-  storeBusy,
-  onInstallStore,
   update,
   onOpenUpdate,
 }: {
   onOpenPalette: () => void;
   onOpenTurbo: (box: DOMRect) => void;
-  onOpenExtensions: (box: DOMRect) => void;
   onMenuChange: (open: boolean) => void;
-  extensionCount: number;
-  storePage: boolean;
-  storeBusy: boolean;
-  onInstallStore: () => void;
   update: UpdateInfo | null;
   onOpenUpdate: () => void;
 }) {
@@ -164,21 +154,6 @@ export function Toolbar({
 
       <button
         type="button"
-        className="icon-btn extensions-button"
-        aria-label="extensions"
-        title={extensionCount > 0 ? `${extensionCount} extensions` : "extensions"}
-        onClick={(event) => onOpenExtensions(event.currentTarget.getBoundingClientRect())}
-      >
-        <Icon name="puzzle" size={16} />
-        {extensionCount > 0 && (
-          <span className="extensions-chevron" aria-hidden="true">
-            <Icon name="chevron-down" size={8} />
-          </span>
-        )}
-      </button>
-
-      <button
-        type="button"
         className={"shelf-chip" + (state.shelf.length > 0 ? " has-cards" : "")}
         aria-label="shelf"
         title="the shelf — right click for its menu"
@@ -189,19 +164,6 @@ export function Toolbar({
         <span>shelf</span>
         <span className="tnum shelf-chip-count">{state.shelf.length}</span>
       </button>
-
-      {storePage && (
-        <button
-          type="button"
-          className="store-chip"
-          disabled={storeBusy}
-          title="install this Chrome Web Store extension in Post"
-          onClick={onInstallStore}
-        >
-          <Icon name="puzzle" size={13} />
-          {storeBusy ? "installing…" : "install in Post"}
-        </button>
-      )}
 
       {update && (
         <button
